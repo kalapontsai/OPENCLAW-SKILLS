@@ -1,12 +1,3 @@
----
-name: agent-cowork
-description: 跨 agent 檔案型訊息協議 + 三方互動章節（flags.awaiting-decision）
-version: 1.3.0
-owner: agent-one (大寶)
-maintainer-repo: https://github.com/kalapontsai/OPENCLAW-SKILLS
-source: ~/.openclaw/agent-cowork/SKILL.md
----
-
 | 漏接風險 | responder 可跳過 | **不會（append 是硬義務）** |
 
 ---
@@ -17,7 +8,7 @@ source: ~/.openclaw/agent-cowork/SKILL.md
 > 取代「用 `sessions_send` 同步呼叫」做不到的背景任務、批量工作、跨 session 持續對話
 
 - **Owners:** 大寶（維護 / 立約）/ 股寶、二寶、三寶（消費者）
-- **Version:** v1.3 — 2026-08-19 修訂（新增 §4.4 三方互動章節 / flags.awaiting-decision + closer 歸屬）
+- **Version:** v1.4 — 2026-08-19 修訂（新增 §11 安裝 SOP：索引式 HEARTBEAT.md 參照，不複製貼上）
 - **生效:** 自本版起新發送的 thread
 - **向前相容:** v1.1 雙檔 thread 不強制 migrate，自然 archive 即可
 
@@ -558,6 +549,12 @@ find ~/.openclaw/agent-cowork/ -name '*<topic>*'
 
 ## 10. 變更記錄
 
+- **v1.4** — 2026-08-19 22:12 — 大寶根據大大指示新增 §11 安裝 SOP
+  - 解決：每次 skill 改版時每個 agent 的 HEARTBEAT.md 都要手動同步的痛苦
+  - 設計：skill 是 source of truth，HEARTBEAT.md 只放 1 行 pointer（**索引式**）
+  - §11 安裝 SOP：明確規定安裝 agent 用**索引式** HEARTBEAT.md 參照，不複製內容
+  - §11.4 升級 SOP：skill 改版後安裝 agent 不需動作（自動生效）
+
 - **v1.3** — 2026-08-19 20:55 — 大寶根據二寶工單（`two-thread-2026-08-19_2030_bulletin-qa-block-spec-for-one`）合規
   - 新增 §4.4 三方互動章節（flags.awaiting-decision + closer + Q&A 格式 + 規則）
   - §7 新增範例 5：三方互動 Q&A 完整生命週期
@@ -589,4 +586,78 @@ find ~/.openclaw/agent-cowork/ -name '*<topic>*'
 
 ---
 
-*維護者：大寶 · 立約：2026-08-17 13:42 Asia/Taipei · 修訂：2026-08-18 14:21*
+## 11. 安裝 SOP（給安裝 skill 的 agent 執行）
+
+> **重要：本節是寫給「安裝此 skill 的那個 agent」看的**，不是給 skill 維護者。
+> 每個要啟用 coworker 功能的 agent 各自執行一次。
+
+### 11.1 為什麼用索引式（不是複製貼上）
+
+每次 agent-cowork 改版時，**不要**把 `HEARTBEAT-snippet.md` 的內容複製貼到自己的 `HEARTBEAT.md`。原因：
+
+- skill 升級時每個 agent 都要手動同步 → **易漏、易衝突**
+- HEARTBEAT.md 膨脹 → 心跳讀取慢、debug 難
+- skill 多版本時容易搞混**誰是 source of truth**
+
+**正確做法：索引式** — `HEARTBEAT.md` 只放 1 行 pointer，實際內容讀自 skill 目錄。
+
+### 11.2 安裝步驟
+
+#### Step 1：放置 skill
+
+```bash
+mkdir -p ~/.openclaw/workspace/skills
+# 下載 / clone / cp -r 整個 agent-cowork/ 到這裡
+ls ~/.openclaw/workspace/skills/agent-cowork/
+# 應看到：SKILL.md / HEARTBEAT-snippet.md / README.md /
+#         templates/ / health-check.sh / bulletin/
+```
+
+#### Step 2：更新自己的 HEARTBEAT.md（**索引式**）
+
+在自己 `~/.openclaw/workspace/<your-agent>/HEARTBEAT.md` 找到（或新增）cowork 區段，改成：
+
+```markdown
+## 🤝 Cowork 心跳 SOP
+→ 來源：installed skill `agent-cowork` v1.4+
+→ 完整內容：`~/.openclaw/workspace/skills/agent-cowork/HEARTBEAT-snippet.md`
+
+（每次心跳掃 `~/.openclaw/agent-cowork/` 主目錄的 SOP 在上面那個檔案裡）
+```
+
+**不要把 `HEARTBEAT-snippet.md` 的內容複製貼過來！**
+索引式讓 skill 升級時**自動**對所有 agent 生效。
+
+#### Step 3：重啟 gateway
+
+```bash
+systemctl --user restart openclaw-gateway
+```
+
+### 11.3 驗證
+
+跑一輪 heartbeat，看：
+
+- `~/.openclaw/agent-cowork/warden.log` 有新事件
+- daily memory 有寫 `cowork-thread:` 紀錄
+- 主目錄的 thread 有被正確處理
+
+### 11.4 升級 SOP（skill 改版時）
+
+當 `agent-cowork` 新版 release 後：
+
+1. **安裝 agent 不需做事**：因為是索引式，新版內容自動生效
+2. 若 skill 有 hot-reload 機制，gateway 自動 reload；否則跑一次 Step 3
+3. 升級 commit 走 GitHub repo 的版本控制（見 repo README）
+
+### 11.5 反安裝
+
+```bash
+rm -rf ~/.openclaw/workspace/skills/agent-cowork
+# 然後把 HEARTBEAT.md 裡 cowork 區段刪掉
+systemctl --user restart openclaw-gateway
+```
+
+---
+
+*維護者：大寶 · 立約：2026-08-17 13:42 Asia/Taipei · 修訂：2026-08-19 22:12 (v1.4)*

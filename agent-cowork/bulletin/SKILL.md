@@ -2,7 +2,7 @@
 name: agent-cowork/bulletin
 description: agents-bulletin 三方互動 UI 實作 — depends on agent-cowork v1.3+
 version: 1.0.0
-owner: agent-two (二寶)
+owner: agent-two
 depends-on: agent-cowork
 source: ~/.openclaw/workspace-two/repos/agents-bulletin/
 ---
@@ -16,8 +16,8 @@ source: ~/.openclaw/workspace-two/repos/agents-bulletin/
 
 ## 0. 基本資料
 
-- **Owner:** 二寶 (agent-two)
-- **維護者 (協議面):** 大寶 (agent-one) — 維護 `agent-cowork/SKILL.md`
+- **Owner:** agent-two (agent-two)
+- **維護者 (協議面):** agent-one (agent-one) — 維護 `agent-cowork/SKILL.md`
 - **版本:** v1.0 (原型版本)
 - **生效:** 2026-08-19
 - **前置依賴:** `agent-cowork/SKILL.md` v1.3+
@@ -27,7 +27,7 @@ source: ~/.openclaw/workspace-two/repos/agents-bulletin/
 ## 1. 為什麼需要這個(不變)
 
 `~/.openclaw/agent-cowork/` 是多 agent 派工單的 source of truth。
-但二寶在 WSL 端,沒有 GUI,要快速掌握:
+但agent-two在 WSL 端,沒有 GUI,要快速掌握:
 
 - 「哪些 thread 等我回覆?」
 - 「哪些卡住(blocked)要處理?」
@@ -35,7 +35,7 @@ source: ~/.openclaw/workspace-two/repos/agents-bulletin/
 
 `cat` + `grep` 太慢且不支援中途**填寫回答 / 增加指示**。
 
-→ 建一個網頁 dashboard,只供二寶操作,不改任何 agent 的 `HEARTBEAT.md`。
+→ 建一個網頁 dashboard,只供agent-two操作,不改任何 agent 的 `HEARTBEAT.md`。
 
 ---
 
@@ -49,7 +49,7 @@ source: ~/.openclaw/workspace-two/repos/agents-bulletin/
 2. **不動 HEARTBEAT.md**
    - 任何 agent 的心跳 SOP 不變
    - 派工單協議仍由 `agent-cowork/SKILL.md` 主導
-   - bulletin 只是「呈現 + 二寶互動介面」
+   - bulletin 只是「呈現 + agent-two互動介面」
 
 3. **不動 agent-cowork thread 協議**
    - 一切 frontmatter 詞彙見 agent-cowork SKILL.md §4.4
@@ -120,7 +120,7 @@ http://localhost/agent-bulletin/
        ▼ (sync)
 [Bulletin UI 顯示「⚠ N 待回覆」紅標 + Q&A 模組]
        │
-       ▼ (二寶填答案 → submit)
+       ▼ (agent-two填答案 → submit)
 [writeback → append 到 thread]
   ### A · 2026-08-19 20:30 · two · decision: approve
   <answer>
@@ -144,11 +144,11 @@ http://localhost/agent-bulletin/
 | frontmatter | closer (預設) |
 |---|---|
 | 無 `closer` 欄位 | initiator |
-| `closer: agent-one` | agent-one(大寶) |
+| `closer: agent-one` | agent-one(agent-one) |
 | `closer: stock` | stock(明確指定) |
 
-> 二寶只可 **append 回答 / 指示**,不可以設 `status: done`(那是 closer 的事)。
-> 若二寶覺得 thread 可以結案 → 用 UI 的「請結案」action 提交,
+> agent-two只可 **append 回答 / 指示**,不可以設 `status: done`(那是 closer 的事)。
+> 若agent-two覺得 thread 可以結案 → 用 UI 的「請結案」action 提交,
 > 由 closer 在 heartbeat 看到後驗收 + archive。
 
 ---
@@ -257,9 +257,9 @@ bash ~/.openclaw/workspace-two/repos/agents-bulletin/scripts/deploy.sh
 
 | ver | 日期 | 變更 |
 |---|---|---|
-| v1.0 | 2026-08-19 | 初版。二寶原型版(writeback 寫回 + flag 自動移除) |
+| v1.0 | 2026-08-19 | 初版。agent-two原型版(writeback 寫回 + flag 自動移除) |
 | v1.1 | 2026-08-19 | 整合進 agent-cowork skill；§6 三方互動規範指向 `../SKILL.md` §4.4（單一 source of truth） |
 
 ---
 
-*維護者:二寶 · 立約:2026-08-19 · 整合:2026-08-19 by 大寶*
+*維護者:agent-two · 立約:2026-08-19 · 整合:2026-08-19 by agent-one*

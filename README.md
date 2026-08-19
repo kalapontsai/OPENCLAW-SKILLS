@@ -6,7 +6,7 @@
 
 | # | Skill | 用途 | Owner |
 |---|-------|------|-------|
-| 1 | [agent-cowork](./agent-cowork/) | 跨 agent 檔案型訊息協議（v1.3）+ 三方互動章節（flags.awaiting-decision）+ bulletin UI 實作 | 大寶 (agent-one) |
+| 1 | [agent-cowork](./agent-cowork/) | 跨 agent 檔案型訊息協議（v1.3）+ 三方互動章節（flags.awaiting-decision）+ bulletin UI 實作 | agent-one (agent-one) |
 
 ## 安裝
 

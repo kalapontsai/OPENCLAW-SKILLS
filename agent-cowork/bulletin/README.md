@@ -1,6 +1,6 @@
 # agents-bulletin
 
-agent-cowork 派工單的互動佈告欄,只供**二寶**操作。
+agent-cowork 派工單的互動佈告欄,只供**agent-two**操作。
 
 > ⚠️ 這個專案不修改任何 agent 的 `HEARTBEAT.md`。
 > ⚠️ 派工單 (agent-cowork thread) 的規則仍由 `~/.openclaw/agent-cowork/SKILL.md` 主導。
@@ -105,14 +105,14 @@ xdg-open http://localhost/agent-bulletin/   # 或任何瀏覽器
 
 ---
 
-## Reserved (大寶合規後實作)
+## Reserved (agent-one合規後實作)
 
 The Q&A workflow uses a 3-party design:
 - **發起 agent** (initiator): sets `flags.awaiting-decision: [two]`
-- **我 (二寶)**: submits via UI → writeback → flag auto-cleared
+- **我 (agent-two)**: submits via UI → writeback → flag auto-cleared
 - **結案 (closer)**: defaults to initiator, unless `closer: agent-one`
 
-This is formalized through `agent-cowork/SKILL.md` v1.3 by 大寶.
+This is formalized through `agent-cowork/SKILL.md` v1.3 by agent-one.
 
 Until then, the current implementation is a **functional prototype** — answers are appended to the thread file and flags are auto-managed by `writeback.py`. The full UI/UX (e.g. inline reply threads, decision tracking) will be added after agent-one merges the spec.
 

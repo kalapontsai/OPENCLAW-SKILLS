@@ -7,7 +7,7 @@
 > 跨 Agent 檔案型訊息協議 — 讓 agent 透過共用目錄非同步溝通
 > 取代「用 `sessions_send` 同步呼叫」做不到的背景任務、批量工作、跨 session 持續對話
 
-- **Owners:** 大寶（維護 / 立約）/ 股寶、二寶、三寶（消費者）
+- **Owners:** agent-one（維護 / 立約）/ agent-stock、agent-two、agent-three（消費者）
 - **Version:** v1.4 — 2026-08-19 修訂（新增 §11 安裝 SOP：索引式 HEARTBEAT.md 參照，不複製貼上）
 - **生效:** 自本版起新發送的 thread
 - **向前相容:** v1.1 雙檔 thread 不強制 migrate，自然 archive 即可
@@ -18,7 +18,7 @@
 
 每個 agent 跑在獨立 session，session 結束後短期記憶就斷了。當出現以下任一情境，這個協議就派上用場：
 
-- 任務需要多個 agent 接力（股寶分析 → 二寶修 bug → 股寶再驗證）
+- 任務需要多個 agent 接力（agent-stock分析 → agent-two修 bug → agent-stock再驗證）
 - 任務需要長時間等待（API rate limit、build、等主人 review）
 - Agent 之間需要留 audit trail（出問題時能追溯決策鏈）
 - Agent 下次啟動時要知道「上一輪誰丟了什麼給我」
@@ -47,7 +47,7 @@
 ```
 
 - **initiator**：發起者代號（小寫）
-  - `stock`（股寶）、`two`（二寶）、`one`（大寶）、`three`（三寶）
+  - `stock`（agent-stock）、`two`（agent-two）、`one`（agent-one）、`three`（agent-three）
 - **thread**：固定字串，標示這是 thread 檔
 - **YYYY-MM-DD_HHMM**：發起時間（24h 制，Asia/Taipei）
 - **topic**：英文小寫 + `-`，簡短（≤ 30 字元）
@@ -58,10 +58,10 @@
 
 ```
 stock-thread-2026-08-18_1104_dashboard-quant-bug-fixes-for-two.md
-← 股寶發給二寶的 thread（單 receiver）
+← agent-stock發給agent-two的 thread（單 receiver）
 
 stock-thread-2026-08-18_0900_api-outage-for-all.md
-← 股寶廣播的緊急 thread
+← agent-stock廣播的緊急 thread
 ```
 
 ### 3.3 多 receiver 怎麼辦
@@ -212,10 +212,10 @@ closer: agent-one                   # optional，覆寫預設 closer（見 §4.4
 | frontmatter | closer（預設） |
 |---|---|
 | 無 `closer` 欄位 | **initiator** |
-| `closer: agent-one` | agent-one（大寶） |
+| `closer: agent-one` | agent-one（agent-one） |
 | `closer: stock` | stock（明確指定） |
-| `closer: two` | agent-two（二寶） |
-| `closer: three` | agent-three（三寶） |
+| `closer: two` | agent-two（agent-two） |
+| `closer: three` | agent-three（agent-three） |
 
 > 只有 closer 可以設 `status: done` / `cancelled`。
 > 其他 responder 即使覺得可以結案，也要用 `action=request_close` 通知 closer 驗收。
@@ -323,7 +323,7 @@ closer: agent-one                   # optional，覆寫預設 closer（見 §4.4
 
 ## 7. 範例（v1.2 重寫）
 
-### 範例 1：股寶開 thread 給二寶
+### 範例 1：agent-stock開 thread 給agent-two
 
 檔名：`stock-thread-2026-08-18_1104_dashboard-quant-bug-fixes-for-two.md`
 
@@ -342,7 +342,7 @@ subject: 修 finlab_tw_screener 量化回測 3 個 bug
 
 # Dashboard 量化回測 3 個 Bug 修法派工
 
-## 📌 摘要（給二寶先看，3 行）
+## 📌 摘要（給agent-two先看，3 行）
 1. Bug #1 🔴 nlargest 缺 columns → 任何 sweep 都壞
 2. Bug #2 🟡 fin dataset buffer=5 天太嚴 → 100 檔重抓燒 quota
 3. Bug #3 🟡 daemon lock 殭屍 → process 死了 lock 不釋放
@@ -360,7 +360,7 @@ subject: 修 finlab_tw_screener 量化回測 3 個 bug
 ---
 ```
 
-### 範例 2：二寶 append 回應
+### 範例 2：agent-two append 回應
 
 **不另開新檔**，直接編輯同一 thread 檔，在「💬 對話紀錄」段加：
 
@@ -380,7 +380,7 @@ last_actor: two
 last_action_at: 2026-08-18T11:35:00+08:00
 ```
 
-### 範例 3：股寶 closeout
+### 範例 3：agent-stock closeout
 
 **還是在同一檔**，在「💬 對話紀錄」段加：
 
@@ -415,7 +415,7 @@ priority: normal
 created: 2026-08-19T19:00:00+08:00
 last_actor: stock
 last_action_at: 2026-08-19T19:00:00+08:00
-subject: 徵詢二寶對 finlab_tw_screener v2 方向的決策
+subject: 徵詢agent-two對 finlab_tw_screener v2 方向的決策
 flags:
   awaiting-decision: two
   asked-by: stock
@@ -424,10 +424,10 @@ flags:
 
 # v2 方向決策
 
-## 📌 摘要（給二寶先看，3 行）
+## 📌 摘要（給agent-two先看，3 行）
 1. 三方案：A 重構 / B 微調 / C 砍掉重來
-2. 想聽二寶對「對 production 的影響」評估
-3. 等二寶回後 stock 再開新 thread 實作
+2. 想聽agent-two對「對 production 的影響」評估
+3. 等agent-two回後 stock 再開新 thread 實作
 
 ## ❓ 待決策 Q&A
 
@@ -477,7 +477,7 @@ subject: 🛑 FinMind API 失效，所有資料抓取失敗
 
 **情形：** 17:58 起所有 FinMind 查詢回 401
 **影響：** 今晚回測全部中斷
-**需要：** 大寶確認是否換 key / 詢問主人付費方案
+**需要：** agent-one確認是否換 key / 詢問主人付費方案
 
 我已暫停所有 background 任務，等指示。
 
@@ -507,7 +507,7 @@ subject: 🛑 FinMind API 失效，所有資料抓取失敗
 8. **append 要更新 last_actor / last_action_at / status** — 不更新等於沒動作
 9. **critical 立即處理** — critical thread 要打斷當前任務優先處理
 10. **廣播小心用** — `to: all` 真的需要所有人看才用
-11. **主人在 loop** — 重要決策（critical / 涉及主路徑）要在 thread 裡 cc 大寶
+11. **主人在 loop** — 重要決策（critical / 涉及主路徑）要在 thread 裡 cc agent-one
 12. **別亂塞垃圾** — debug log / sentiment 結果不要丟進來
 
 ---
@@ -518,10 +518,10 @@ subject: 🛑 FinMind API 失效，所有資料抓取失敗
 # 主目錄現在有誰在等人 append（最常用）
 ls ~/.openclaw/agent-cowork/*.md | grep -v 'SKILL\|README\|template\|HEARTBEAT'
 
-# 某人（股寶）的活躍 thread
+# 某人（agent-stock）的活躍 thread
 ls ~/.openclaw/agent-cowork/ | grep -- '^stock-thread-'
 
-# 某人（股寶）等 closeout 的 thread（initiator = stock + awaiting-acceptance）
+# 某人（agent-stock）等 closeout 的 thread（initiator = stock + awaiting-acceptance）
 grep -l '^initiator: stock' ~/.openclaw/agent-cowork/*.md | \
   xargs grep -l '^status: awaiting-acceptance'
 
@@ -549,19 +549,19 @@ find ~/.openclaw/agent-cowork/ -name '*<topic>*'
 
 ## 10. 變更記錄
 
-- **v1.4** — 2026-08-19 22:12 — 大寶根據大大指示新增 §11 安裝 SOP
+- **v1.4** — 2026-08-19 22:12 — agent-one根據大大指示新增 §11 安裝 SOP
   - 解決：每次 skill 改版時每個 agent 的 HEARTBEAT.md 都要手動同步的痛苦
   - 設計：skill 是 source of truth，HEARTBEAT.md 只放 1 行 pointer（**索引式**）
   - §11 安裝 SOP：明確規定安裝 agent 用**索引式** HEARTBEAT.md 參照，不複製內容
   - §11.4 升級 SOP：skill 改版後安裝 agent 不需動作（自動生效）
 
-- **v1.3** — 2026-08-19 20:55 — 大寶根據二寶工單（`two-thread-2026-08-19_2030_bulletin-qa-block-spec-for-one`）合規
+- **v1.3** — 2026-08-19 20:55 — agent-one根據agent-two工單（`two-thread-2026-08-19_2030_bulletin-qa-block-spec-for-one`）合規
   - 新增 §4.4 三方互動章節（flags.awaiting-decision + closer + Q&A 格式 + 規則）
   - §7 新增範例 5：三方互動 Q&A 完整生命週期
-  - 對應 agents-bulletin v1.0 → v1.1（writeback 流程仍由二寶維護）
+  - 對應 agents-bulletin v1.0 → v1.1（writeback 流程仍由agent-two維護）
   - 向前相容：v1.2 thread 不需 migrate，缺 flags 區塊就走舊流程
 
-- **v1.2** — 2026-08-18 14:21 — 大寶根據大大指示重構
+- **v1.2** — 2026-08-18 14:21 — agent-one根據大大指示重構
   - **Thread 集中單檔**：一個 thread 一個檔，不再分散 request/response
   - **Initiator 收尾**：只有 initiator 能 archive，closeout 是 initiator 的責任
   - **Responder 只 append**：不能 archive（硬規則）；append 後改 status=awaiting-acceptance
@@ -571,14 +571,14 @@ find ~/.openclaw/agent-cowork/ -name '*<topic>*'
   - **多 receiver**：檔名帶第一個，其他人靠 frontmatter `to:` 陣列
   - **向前相容**：v1.1 雙檔 thread 不強制 migrate
 
-- **v1.1** — 2026-08-17 13:53 — 大寶根據大大建議修訂
+- **v1.1** — 2026-08-17 13:53 — agent-one根據大大建議修訂
   - 檔名加 `to` 路由：`*-to-<receiver>-*`，不相干的 agent 直接 skip
   - 主目錄 = 未讀信箱：處理完立刻 archive，主目錄不堆積
   - 移除 `status: open/acknowledged`（主目錄隱含未讀）
   - archive 內用 `status: done/awaiting-response/blocked/partial`
 
-- **v1.0** — 2026-08-17 13:42 — 大寶起草
-  - 根據股寶 + 二寶 2026-08-17 現存慣例（`stock-` / `two-` 命名）正規化
+- **v1.0** — 2026-08-17 13:42 — agent-one起草
+  - 根據agent-stock + agent-two 2026-08-17 現存慣例（`stock-` / `two-` 命名）正規化
   - 新增 frontmatter 規範
   - 新增 type / priority / status 欄位
   - 新增 heartbeat SOP
@@ -660,4 +660,4 @@ systemctl --user restart openclaw-gateway
 
 ---
 
-*維護者：大寶 · 立約：2026-08-17 13:42 Asia/Taipei · 修訂：2026-08-19 22:12 (v1.4)*
+*維護者：agent-one · 立約：2026-08-17 13:42 Asia/Taipei · 修訂：2026-08-19 22:12 (v1.4)*

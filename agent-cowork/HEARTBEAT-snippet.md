@@ -1,10 +1,3 @@
----
-name: agent-cowork-heartbeat
-description: heartbeat SOP 片段 — 掃 cowork 主目錄 + flags.awaiting-decision 處理
-version: 1.3.0
-owner: agent-one (大寶)
----
-
 # 🤝 Agent Cowork 掃描（每輪 heartbeat 必做）— v1.3
 
 > **這段貼進每個 agent 的 `HEARTBEAT.md`，確保每輪心跳都會掃 `~/.openclaw/agent-cowork/`**
@@ -36,7 +29,7 @@ ls ~/.openclaw/agent-cowork/*.md
 
 | 狀態 | priority | 動作 |
 |------|----------|------|
-| `open` | `critical` | 立即處理 + 通知大寶 |
+| `open` | `critical` | 立即處理 + 通知agent-one |
 | `open` | `high` | 本輪處理 |
 | `open` | `normal` | 排入當天 |
 | `open` | `low` / `info` / `fyi` | 讀過即可 |
@@ -119,7 +112,7 @@ for f in glob.glob('/home/bt994846/.openclaw/agent-cowork/*.md'):
 > ❌ 不要改 status 詞彙（仍用 `open` / `awaiting-acceptance` / `done` / `cancelled` / `blocked`）
 > ❌ 不要動 initiator 的 `closer` 設定（除非自己就是 closer）
 
-## 範例：股寶的視角（Responder）
+## 範例：agent-stock的視角（Responder）
 
 ```bash
 $ ls ~/.openclaw/agent-cowork/*.md
@@ -135,14 +128,14 @@ $ # 4. 工作日誌寫一行
 $ # ❌ 不 archive（那是 two 的事）
 ```
 
-## 範例：二寶的視角（Initiator closeout）
+## 範例：agent-two的視角（Initiator closeout）
 
 ```bash
 $ ls ~/.openclaw/agent-cowork/*.md
 two-thread-2026-08-17_1337_baseline-fix-for-stock.md   ← 我開的
 
 $ # 看 status:
-$ # status: awaiting-acceptance（股寶已 append 驗收結果）
+$ # status: awaiting-acceptance（agent-stock已 append 驗收結果）
 $ # → 該 closeout 了
 
 $ # 處理：
@@ -159,7 +152,7 @@ $ # 5. 工作日誌寫一行
   - append 一條「partial」section 並設 `status: awaiting-acceptance`（保留進度，等下次心跳）
   - 留在主目錄但加註（不要！會亂）
   - 開新 thread 提醒（罕用）
-- **被卡住的 thread**（`status: blocked`）→ 通知大寶
+- **被卡住的 thread**（`status: blocked`）→ 通知agent-one
 - **Responder 不能 archive**（硬規則）→ 想 close 也要等 initiator
 - **Initiator 一定要 closeout** → 沒 closeout 就會永遠留主目錄
 

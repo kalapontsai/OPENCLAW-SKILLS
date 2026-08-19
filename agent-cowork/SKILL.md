@@ -8,7 +8,7 @@
 > 取代「用 `sessions_send` 同步呼叫」做不到的背景任務、批量工作、跨 session 持續對話
 
 - **Owners:** agent-one（維護 / 立約）/ agent-stock、agent-two、agent-three（消費者）
-- **Version:** v1.4 — 2026-08-19 修訂（新增 §11 安裝 SOP：索引式 HEARTBEAT.md 參照，不複製貼上）
+- **Version:** v1.5 — 2026-08-19 修訂（新增 §11.0 per host 設計：只一個 agent 負責安裝 + 更新所有 HEARTBEAT.md）
 - **生效:** 自本版起新發送的 thread
 - **向前相容:** v1.1 雙檔 thread 不強制 migrate，自然 archive 即可
 
@@ -549,6 +549,13 @@ find ~/.openclaw/agent-cowork/ -name '*<topic>*'
 
 ## 10. 變更記錄
 
+- **v1.5** — 2026-08-19 22:46 — agent-one 根據主人指示新增 §11.0 per host 設計
+  - 解決：每台 OpenClaw host 只需 1 個 agent 裝 skill + 更新所有 HEARTBEAT.md
+  - 設計：避免 N 個 agent 重複裝、避免版本不一致、責任集中
+  - §11.0 明確「安裝 agent」身份（通常 = protocol 維護者）
+  - §11.4 升級 SOP 改為「**所有 agent** 都不需做事」（不是只有安裝 agent）
+  - §11 intro 強調 per host 設計
+
 - **v1.4** — 2026-08-19 22:12 — agent-one根據大大指示新增 §11 安裝 SOP
   - 解決：每次 skill 改版時每個 agent 的 HEARTBEAT.md 都要手動同步的痛苦
   - 設計：skill 是 source of truth，HEARTBEAT.md 只放 1 行 pointer（**索引式**）
@@ -589,7 +596,33 @@ find ~/.openclaw/agent-cowork/ -name '*<topic>*'
 ## 11. 安裝 SOP（給安裝 skill 的 agent 執行）
 
 > **重要：本節是寫給「安裝此 skill 的那個 agent」看的**，不是給 skill 維護者。
-> 每個要啟用 coworker 功能的 agent 各自執行一次。
+> **per host 只需 1 個 agent 裝 + 順手更新所有 HEARTBEAT.md**（見 §11.0），不是每個 agent 自己裝。
+
+### 11.0 per host 設計：只一個 agent 負責安裝
+
+**每台 OpenClaw 主機只需要一個 agent** 負責：
+
+1. 安裝此 skill 到 `~/.openclaw/workspace/skills/agent-cowork/`
+2. 把同 host 上**所有其他 agent** 的 `HEARTBEAT.md` 改成索引式
+
+**誰？** 通常是 **protocol 維護者**（agent-cowork SKILL.md 的 owner / 起草者）。
+
+**一個 host 上若有 N 個 agent**（如 `one` / `two` / `three` / `stock`）：
+
+- 只有 1 個「安裝 agent」跑 §11.2 的 3 步
+- 這 1 個 agent 裝完 skill 後，**順手**把其他 N-1 個 agent 的 HEARTBEAT.md 也改成索引式
+- 其他 N-1 個 agent **不需要**自己裝、**不需要**自己改 HEARTBEAT.md
+
+**為什麼這樣設計：**
+
+- 同 host 的 agent 共用同一個 OpenClaw 安裝、同一個 skill 目錄、同一個 gateway
+- 分開裝會做重複工（每個各自跑 3 步 → 共 N×3 步）
+- 由 1 個 agent 集中做 → 共 1 次裝 + N 次 HEARTBEAT.md 更新（總是比 N×3 少）
+- 避免 N 個 agent 各自裝出不一致版本
+- 責任集中：出錯只找 1 個 agent
+
+> **判斷誰是「安裝 agent」：**看 §0 開頭的 **Owner** 欄位，誰是 maintainer 就是安裝 agent。
+> 本 skill 目前 maintainer 是 `agent-one`（見 §0），所以多 agent host 上由 agent-one 負責裝。
 
 ### 11.1 為什麼用索引式（不是複製貼上）
 
@@ -646,8 +679,9 @@ systemctl --user restart openclaw-gateway
 
 當 `agent-cowork` 新版 release 後：
 
-1. **安裝 agent 不需做事**：因為是索引式，新版內容自動生效
-2. 若 skill 有 hot-reload 機制，gateway 自動 reload；否則跑一次 Step 3
+1. **所有 agent 都不需做事**：因為是索引式，新版內容自動生效
+   （含「安裝 agent」與同 host 上的「其他 agent」皆同）
+2. 若 skill 有 hot-reload 機制，gateway 自動 reload；否則跑一次 §11.2 Step 3
 3. 升級 commit 走 GitHub repo 的版本控制（見 repo README）
 
 ### 11.5 反安裝
@@ -660,4 +694,4 @@ systemctl --user restart openclaw-gateway
 
 ---
 
-*維護者：agent-one · 立約：2026-08-17 13:42 Asia/Taipei · 修訂：2026-08-19 22:12 (v1.4)*
+*維護者：agent-one · 立約：2026-08-17 13:42 Asia/Taipei · 修訂：2026-08-19 22:46 (v1.5)*

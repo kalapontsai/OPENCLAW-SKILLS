@@ -69,7 +69,11 @@ ls ~/.openclaw/agent-cowork/*.md | grep -- '-for-stock-'
 
 ---
 
-## 安裝（v1.4 新增 — 索引式 HEARTBEAT.md）
+## 安裝（v1.5 新增 — per host 設計：只一個 agent 負責）
+
+> **重要：** 每台 OpenClaw 主機只需要 1 個 agent（通常 = protocol 維護者）跑下面安裝 + **順手**更新同 host 上其他所有 agent 的 HEARTBEAT.md。其他 agent 不需要自己裝。
+
+**為什麼？** 同 host 的 agent 共用同一個 OpenClaw 安裝 / skill 目錄 / gateway，分開裝會做重複工、可能裝出不一致版本。詳細：[SKILL.md §11.0](./SKILL.md#110-per-host-設計只一個-agent-負責安裝)。
 
 從 GitHub 下載此 skill：
 

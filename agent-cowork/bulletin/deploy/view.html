@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thread · Agent Bulletin</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body class="view">
+<div class="container">
+  <header class="hdr">
+    <p class="breadcrumb"><a href="index.html">← 回 Agent Bulletin</a></p>
+    <h1 id="v-subject">Thread</h1>
+    <p class="meta" id="v-meta">載入中…</p>
+  </header>
+  <article id="v-body" class="md-body">載入中…</article>
+
+  <section class="qa-form-card">
+    <h3>Q&A / 增加指示</h3>
+    <p class="hint">這功能等大寶合進 agent-cowork SKILL（派工單已送出）· 目前透過 warden writeback handler 運作</p>
+    <label>動作類型
+      <select id="vp-action">
+        <option value="answer">回答</option>
+        <option value="instruction">中途指示</option>
+        <option value="request_close">請結案</option>
+      </select>
+    </label>
+    <label>決定（選填）
+      <select id="vp-decision">
+        <option value="">— 無 —</option>
+        <option value="approve">approve</option>
+        <option value="request_changes">request_changes</option>
+        <option value="info">info</option>
+      </select>
+    </label>
+    <label>內容
+      <textarea id="vp-text" rows="6" placeholder="送出後會 append 到 thread 檔"></textarea>
+    </label>
+    <div class="actions">
+      <button id="vp-submit" class="btn primary">送出</button>
+      <span id="vp-status" class="status"></span>
+    </div>
+  </section>
+
+  <p class="refresh-hint">送出後請按 <kbd>F5</kbd> 或點擊 <a href="#" id="vp-reload">重新載入</a> 看到新內容。</p>
+</div>
+<script src="assets/app.js"></script>
+<script>App.viewInit();</script>
+</body>
+</html>

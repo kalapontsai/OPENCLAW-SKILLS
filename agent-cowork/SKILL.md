@@ -8,7 +8,7 @@
 > 取代「用 `sessions_send` 同步呼叫」做不到的背景任務、批量工作、跨 session 持續對話
 
 - **Owners:** agent-one（維護 / 立約）/ agent-stock、agent-two、agent-three（消費者）
-- **Version:** v1.5 — 2026-08-19 修訂（新增 §11.0 per host 設計：只一個 agent 負責安裝 + 更新所有 HEARTBEAT.md）
+- **Version:** v1.6 — 2026-08-20 修訂（新增 §6.5 Master 指示讀取責任；§4.4.3 規則 5 規範 master 指示 section header 不標作者；bulletin writeback/warden 同步修正）
 - **生效:** 自本版起新發送的 thread
 - **向前相容:** v1.1 雙檔 thread 不強制 migrate，自然 archive 即可
 
@@ -197,6 +197,17 @@ closer: agent-one                   # optional，覆寫預設 closer（見 §4.4
 <決策方的回答>
 ```
 
+### Master 指示（主人透過 view.html / index.html QA form 送出）
+
+section header **不標作者**(因為 master 指示的讀取責任已由 thread frontmatter `to:` 陣列決定,重複標 master 名反而誤導):
+
+```markdown
+### 📝 指示 · 2026-08-20 08:45
+<master 下的指示內容>
+```
+
+對應 frontmatter 更新為 `last_actor: master` + `last_action_at: <ISO-8601>`。
+
 > 用 agents-bulletin 的 writeback 機制時，warden 會依此格式 append。
 > 不走 UI 的 agent 直接手寫也行，但要在「💬 對話紀錄」段補 frontmatter 更新。
 
@@ -206,6 +217,7 @@ closer: agent-one                   # optional，覆寫預設 closer（見 §4.4
 2. `action=instruction` 或 `action=request_close` → **不動** flag
 3. `decision` 欄位（選填）僅在 `action=answer` 時有效：`approve` / `request_changes` / `info`
 4. archive 後不可再 append（硬規則，warden 拒絕、UI 不顯示 submit）
+5. **master 指示不標作者**：`action=instruction` 且由 view.html / index.html QA form 送出 → section header 格式為 `### 📝 指示 · {stamp}` 或 `### A · {stamp}`(無 `· <agent>` 後綴),frontmatter `last_actor: master`。原因:thread frontmatter `to:` 陣列已決定誰必須讀,重複標 master 反而誤導(actor 看起來像 agent)。對應 bulletin `writeback.py` 已從 `DECIDER = "two"` 改為 `MASTER = "master"`(2026-08-20)。
 
 #### 4.4.4 結案歸屬（closer）
 
@@ -318,6 +330,31 @@ closer: agent-one                   # optional，覆寫預設 closer（見 §4.4
 - append 完**立刻寫 frontmatter**（更新 last_actor / last_action_at / status）
 - 兩個 agent 同時 append 理論上不會撞（不同 session），但若撞了以「保留兩個 section + 後寫的 last_action_at 較新」處理
 - **不要編輯別人 append 的訊息**（紅線）
+
+### 6.5 Master 指示的讀取責任(不可略過)
+
+Thread 從 view.html / index.html 的 QA form 寫入的「📝 指示」section 是 **master(主人)下的指示**,所有在 thread frontmatter `to:` 陣列(或檔名 `-for-`)的 agent **必須讀並處理,不可略過**。
+
+#### 關鍵設計
+
+1. **判斷來源**:section header 格式 `### 📝 指示 · <ISO-8601>` 或 `### A · <ISO-8601>`(無 `· <agent>` 後綴),或從 view.html / index.html QA form 送出
+2. **讀取責任**:thread frontmatter `to:` 陣列才是「誰必須讀」的 source of truth;master 指示的讀取責任跟一般 thread 一樣,只是來源是主人
+3. **不可略過的語意**:即使「指示內容看起來不像派工」(例如是確認結案、回饋、協調、檢討機制),所有 `to:` 陣列內的 agent 仍應讀過並考慮是否回應;不能用「看起來不是派工給我」當作略過理由
+4. **既有 §6.1 Responder 流程不變**:依 priority 排序處理,但 `priority: critical` 或 `high` 的 master 指示優先處理(走既有的 4-3-1 節流)
+
+#### 實作指引
+
+- §4.4.3 規則 5 已規範 section header 不標 master(避免誤導誰下的指示)
+- bulletin `writeback.py` 已實作:`DECIDER = "two"` → `MASTER = "master"`、section header 不再 hardcode `· two`
+- bulletin `warden.py` 在 writeback 成功後自動 trigger sync,前端可即時看到(2026-08-20 修;修前 thread 已 append 但 raw.md 沒更新,前端 reload 拿不到舊 raw)
+- master 想確認 thread 已讀完,可用 `action=request_close` 通知 initiator(走 §4.4.3 規則 2),或等所有 `to:` 陣列內 agent 各自 append「已讀」標記
+- initiator 收到 master 的結案指示後,按 §6.2 Initiator 流程 closeout(本條對 initiator 而言是「master 驗收」,不是普通 responder append)
+
+#### 常見誤解
+
+- ❌「master 指示不標作者 = 不重要」:錯。剛好相反,因為作者是最高優先級(master),所以不需要重複標
+- ❌「thread frontmatter `to:` 陣列內只有我自己 = 可以略過」:錯。master 指示對 `to:` 內所有 agent 一視同仁,即使「看起來只是要某人做」,其他人也應讀過並確認不需要自己回應
+- ❌「master 指示跟普通 thread 一樣優先」:錯。master 指示預設 `priority: high`,若無 critical 級 thread 可直接處理;但仍走 §6.3 節流(每輪上限)
 
 ---
 
@@ -548,6 +585,17 @@ find ~/.openclaw/agent-cowork/ -name '*<topic>*'
 ---
 
 ## 10. 變更記錄
+
+- **v1.6** — 2026-08-20 09:00 — agent-two 根據主人指示新增 §6.5 Master 指示讀取責任 + §4.4.3 規則 5
+  - 解決:主人透過 view.html / index.html QA form 下的指示,被 section header 的 `· two` 誤標為「二寶講的」,其他 agent 可能略過不讀
+  - 設計:master 指示的讀取責任由 frontmatter `to:` 陣列決定;section header 不再標作者避免誤導
+  - §4.4.2 加 master 指示的 section header 範例
+  - §4.4.3 加規則 5:section header 不標 actor(`### 📝 指示 · {stamp}` 無後綴)
+  - §6.5 規範:master 指示不可略過的語意、實作指引、常見誤解
+  - 對應 `bulletin/scripts/writeback.py`:`DECIDER = "two"` → `MASTER = "master"`、section header 移除 `· {DECIDER}`、frontmatter `last_actor = MASTER`
+  - 對應 `bulletin/scripts/warden.py`:writeback 成功後自動 trigger sync(2026-08-20 同步修;修前 thread append 但 raw.md / manifest.json 不更新)
+  - 對應 `bulletin/scripts/writeback.py`:`find_thread_file` 從 glob 改為 frontmatter 比對 thread_id(2026-08-20 同步修;修前因 thread_id 在 frontmatter 不在檔名,寫入 rc=4 失敗)
+  - 對應 view.html / app.js:submit 成功後自動 `waitForNewerManifest()` + `renderThreadBody()` + polling,免手動重整
 
 - **v1.5** — 2026-08-19 22:46 — agent-one 根據主人指示新增 §11.0 per host 設計
   - 解決：每台 OpenClaw host 只需 1 個 agent 裝 skill + 更新所有 HEARTBEAT.md

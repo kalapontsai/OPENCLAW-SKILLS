@@ -72,6 +72,7 @@ def scan_once() -> None:
         )
 
     # 2. writeback payloads
+    sync_needed = False
     for wb in sorted(DATA_DIR.glob(".writeback-*.json")):
         log(f"writeback detect: {wb.name}")
         rc = run_script(
@@ -82,6 +83,7 @@ def scan_once() -> None:
             try:
                 wb.unlink()
                 log(f"writeback removed: {wb.name}")
+                sync_needed = True  # thread 已 append,接下來要 sync 才能讓前端看到
             except Exception as e:
                 log(f"writeback remove fail: {e}")
         else:
@@ -91,6 +93,15 @@ def scan_once() -> None:
                 wb.rename(wb.with_suffix(wb.suffix + ".failed"))
             except Exception as e:
                 log(f"rename fail: {e}")
+
+    # 3. 若本輪有成功 writeback,主動 trigger sync,讓前端 raw.md / manifest.json 同步更新
+    # 修「送出後 F5 沒用」問題(2026-08-20 報告:thread 已 append,但 raw.md 沒更新,前端 reload 也拿不到)
+    if sync_needed:
+        log("writeback success → trigger sync")
+        run_script(
+            "sync",
+            [sys.executable, str(REPO_DIR / "scripts" / "sync_bulletin.py")],
+        )
 
 
 def main() -> int:

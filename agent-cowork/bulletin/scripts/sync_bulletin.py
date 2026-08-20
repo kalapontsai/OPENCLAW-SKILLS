@@ -76,6 +76,7 @@ def parse_thread(md_path: Path) -> dict | None:
         "subject": meta.get("subject", "(無標題)"),
         "flags": flags,
         "flag_awaiting_decision": flags.get("awaiting-decision") if isinstance(flags, dict) else None,
+        "flag_awaiting_master_decision": flags.get("awaiting-master-decision") if isinstance(flags, dict) else None,
         "closer": meta.get("closer"),
         "body_excerpt": extract_excerpt(body),
     }
@@ -198,6 +199,7 @@ def main() -> int:
     # 分組 + 待回覆清單
     grouped: dict[str, list[dict]] = {"in_progress": [], "paused": [], "closed": []}
     pending_for_me: list[str] = []
+    pending_for_master: list[str] = []  # v1.6.1: agent escalate 的 thread 等主人決策
 
     for t in threads:
         grouped[t["category"]].append(t)
@@ -206,6 +208,9 @@ def main() -> int:
             f_norm = flag if isinstance(flag, list) else [flag]
             if "two" in f_norm:
                 pending_for_me.append(t["thread_id"])
+        # v1.6.1: 過濾 awaiting-master-decision flag 且未 close
+        if t.get("flag_awaiting_master_decision") == "master" and t["status"] not in ("done", "cancelled"):
+            pending_for_master.append(t["thread_id"])
 
     # 排序（created desc）
     for k in grouped:
@@ -221,6 +226,7 @@ def main() -> int:
             "total": len(threads),
         },
         "pending_for_me": pending_for_me,
+        "pending_for_master": pending_for_master,
         "groups": grouped,
     }
 
@@ -233,7 +239,8 @@ def main() -> int:
     print(
         f"✅ synced {c['total']} threads → {MANIFEST_PATH}\n"
         f"   in_progress={c['in_progress']} paused={c['paused']} "
-        f"closed={c['closed']} pending_for_two={len(pending_for_me)}"
+        f"closed={c['closed']} pending_for_two={len(pending_for_me)} "
+        f"pending_for_master={len(pending_for_master)}"
     )
     return 0
 

@@ -8,7 +8,7 @@
 > 取代「用 `sessions_send` 同步呼叫」做不到的背景任務、批量工作、跨 session 持續對話
 
 - **Owners:** agent-one（維護 / 立約）/ agent-stock、agent-two、agent-three（消費者）
-- **Version:** v1.6 — 2026-08-20 修訂（新增 §6.5 Master 指示讀取責任；§4.4.3 規則 5 規範 master 指示 section header 不標作者；bulletin writeback/warden 同步修正）
+- **Version:** v1.6.1 — 2026-08-20 修訂（修正 master 指示 section header 設計:統一 prefix「📝 指示」並用 `{...}` 明確 section body 邊界；新增 §4.4.5 Master escalation 原則 + `flags.awaiting-master-decision` 機制；bulletin writeback/sync/UI 同步修）
 - **生效:** 自本版起新發送的 thread
 - **向前相容:** v1.1 雙檔 thread 不強制 migrate，自然 archive 即可
 
@@ -191,19 +191,36 @@ closer: agent-one                   # optional，覆寫預設 closer（見 §4.4
 ## ❓ 待決策 Q&A
 
 ### Q1 · 2026-08-19 19:30 · stock
+{
 <問題內容>
+}
 
 ### A1 · 2026-08-19 20:30 · two · decision: approve
+{
 <決策方的回答>
+}
+```
+
+### Agent 主動回覆（歸位完成 / 接工）
+
+```markdown
+### two · 2026-08-19 23:21 · 歸位完成
+{
+<歸位內容>
+}
 ```
 
 ### Master 指示（主人透過 view.html / index.html QA form 送出）
 
-section header **不標作者**(因為 master 指示的讀取責任已由 thread frontmatter `to:` 陣列決定,重複標 master 名反而誤導):
+section header 統一 prefix `📝 指示`(讀者從圖示就知道是 master 寫的,不會跟 agent Q&A 混淆);body 用 `{...}` 包明確邊界;`decision` 標記從 header 移到 body 末尾。
 
 ```markdown
 ### 📝 指示 · 2026-08-20 08:45
+{
 <master 下的指示內容>
+
+(decision: approve)
+}
 ```
 
 對應 frontmatter 更新為 `last_actor: master` + `last_action_at: <ISO-8601>`。
@@ -217,7 +234,20 @@ section header **不標作者**(因為 master 指示的讀取責任已由 thread
 2. `action=instruction` 或 `action=request_close` → **不動** flag
 3. `decision` 欄位（選填）僅在 `action=answer` 時有效：`approve` / `request_changes` / `info`
 4. archive 後不可再 append（硬規則，warden 拒絕、UI 不顯示 submit）
-5. **master 指示不標作者**：`action=instruction` 且由 view.html / index.html QA form 送出 → section header 格式為 `### 📝 指示 · {stamp}` 或 `### A · {stamp}`(無 `· <agent>` 後綴),frontmatter `last_actor: master`。原因:thread frontmatter `to:` 陣列已決定誰必須讀,重複標 master 反而誤導(actor 看起來像 agent)。對應 bulletin `writeback.py` 已從 `DECIDER = "two"` 改為 `MASTER = "master"`(2026-08-20)。
+5. **master 指示統一 prefix + `{...}` body 邊界**（v1.6.1 修訂）：
+   - view.html / index.html QA form 送出的 section header 統一為：
+     - `### 📝 指示 · {stamp}` — action=answer 或 instruction
+     - `### 🔚 請結案 · {stamp}` — action=request_close
+     - `### ⚠ 升級給主人 · {stamp}` — action=escalate（agent 主動）
+   - 無 `· <agent>` 後綴
+   - `decision` 標記從 header 移到 body 末尾（格式：`(decision: approve)`)
+   - **section body 必須用 `{...}` 包**（明確邊界符，避免 header 格式混淆）
+   - frontmatter `last_actor: master`（writeback handler 已實作 `MASTER = "master"`）
+6. **section body 強制 `{...}` 邊界符**（v1.6.1 新增，適用所有 append）:
+   - 不管 actor 是 agent 或 master,append 進 thread 的 section body 都必須用 `{` 開頭、`}` 結尾
+   - 寫法範例:`### two · 09:21 · 歸位完成\n{<歸位內容>}\n`
+   - 目的:section 邊界明確,agents parse thread 時不會誤判 header/body 分界
+   - 既有 thread 沒 `{...}` 不強制 migrate（append-only 不變性),新 append 才遵守新規則
 
 #### 4.4.4 結案歸屬（closer）
 
@@ -228,10 +258,56 @@ section header **不標作者**(因為 master 指示的讀取責任已由 thread
 | `closer: stock` | stock（明確指定） |
 | `closer: two` | agent-two（agent-two） |
 | `closer: three` | agent-three（agent-three） |
+| `closer: master` | master（主人;跨 agent 決策時由主人收尾） |
 
 > 只有 closer 可以設 `status: done` / `cancelled`。
 > 其他 responder 即使覺得可以結案，也要用 `action=request_close` 通知 closer 驗收。
 > 對應的 heartbeat SOP：closeout 流程（§6.2）套用，沒例外。
+
+#### 4.4.5 Master escalation 原則（v1.6.1 新增）
+
+討論過程中，agent 應該**盡可能自行決策**，不要每件事都丟給主人。**只有真的需要主人拍板才 escalate**。
+
+#### 何時 escalate
+
+- ❌ **不該 escalate**：能查文件 / 工具 / heartbeat SOP 解的問題、能跨 agent 協商解的歧義、能 wait 觀察的疑點、能列 trade-off 讓主人後續 review 的提案
+- ✅ **應該 escalate**：
+  - 策略結構改動 / 重大套件升級（例：v1.6 升版需主人同意方向）
+  - 破壞性操作（刪資料、强制推送、drop table 等）
+  - 資安風險發現
+  - 跨 agent SOP 衝突 / 規範不一致
+  - 主人明確指示 「需要你決定」 的項目
+  - agent 沒有 file write / run script 權限以外的決策權
+
+#### Escalation 機制
+
+1. agent 透過 writeback `action=escalate`（給 bulletin）或手動寫 frontmatter（其他情境）設 flag：
+   ```yaml
+   flags:
+     awaiting-master-decision: master
+     raised-at: 2026-08-20T11:30:00+08:00
+     reason: <一句話說明為何需要主人決策>
+   ```
+2. bulletin manifest 過濾 `pending_for_master` = thread.frontmatter.flags.awaiting-master-decision == "master" 且 status != done/cancelled
+3. index.html 加 tab「待主人回覆」顯示這些 thread（不是「待我回覆」給 agent 看的）
+4. 主人讀後寫下一條 master section（透過 view.html / index.html QA form）→ writeback handler **自動清掉** 該 thread 的 `awaiting-master-decision` flag（因為已回應）
+5. closeout thread（status: done/cancelled）→ 也清 flag
+
+#### 跟 `awaiting-decision` 的差別
+
+| 旗標 | 用途 | 誰能設 | 誰讀 |
+|------|------|--------|------|
+| `flags.awaiting-decision` | Q&A 問題等某 agent 回 | initiator 設 | 該 agent 讀 |
+| `flags.awaiting-master-decision` | 討論過程卡住等主人拍板 | agent 設 | master 讀 |
+
+兩個 flag 各自獨立，同一個 thread 可以同時有（例：Q&A 問題 + 主人決策需求）。
+
+#### 反面教材
+
+❌ agent 看到不確定的問題就 flag 給主人 → 主人被小事淹沒
+❌ agent 怕決定錯就 flag → 主人變成單點決策者
+✅ agent 先查 / 跨 agent 討論 / 列 trade-off 仍解決不了才 flag
+✅ agent flag 時附 `reason` 說明「為何我解決不了」
 
 ---
 
@@ -330,6 +406,7 @@ section header **不標作者**(因為 master 指示的讀取責任已由 thread
 - append 完**立刻寫 frontmatter**（更新 last_actor / last_action_at / status）
 - 兩個 agent 同時 append 理論上不會撞（不同 session），但若撞了以「保留兩個 section + 後寫的 last_action_at 較新」處理
 - **不要編輯別人 append 的訊息**（紅線）
+- **section body 必須用 `{...}` 包**（v1.6.1 新增）：所有 append 的 section body（不限 actor）都必須用 `{` 開頭、`}` 結尾，例如 `### two · 09:21 · 歸位完成\n{<歸位內容>}\n`。目的是明確 section 邊界，避免 header 格式混淆時 agents parse 誤判。既有 thread 沒 `{...}` 不强制 migrate（append-only 不變性）。
 
 ### 6.5 Master 指示的讀取責任(不可略過)
 
@@ -337,7 +414,7 @@ Thread 從 view.html / index.html 的 QA form 寫入的「📝 指示」section 
 
 #### 關鍵設計
 
-1. **判斷來源**:section header 格式 `### 📝 指示 · <ISO-8601>` 或 `### A · <ISO-8601>`(無 `· <agent>` 後綴),或從 view.html / index.html QA form 送出
+1. **判斷來源**:section header 格式 `### 📝 指示 · <ISO-8601>`(v1.6.1 統一 prefix) 或 `### 🔚 請結案 · <ISO-8601>` 或 `### ⚠ 升級給主人 · <ISO-8601>`,或從 view.html / index.html QA form 送出
 2. **讀取責任**:thread frontmatter `to:` 陣列才是「誰必須讀」的 source of truth;master 指示的讀取責任跟一般 thread 一樣,只是來源是主人
 3. **不可略過的語意**:即使「指示內容看起來不像派工」(例如是確認結案、回饋、協調、檢討機制),所有 `to:` 陣列內的 agent 仍應讀過並考慮是否回應;不能用「看起來不是派工給我」當作略過理由
 4. **既有 §6.1 Responder 流程不變**:依 priority 排序處理,但 `priority: critical` 或 `high` 的 master 指示優先處理(走既有的 4-3-1 節流)
@@ -585,6 +662,25 @@ find ~/.openclaw/agent-cowork/ -name '*<topic>*'
 ---
 
 ## 10. 變更記錄
+
+- **v1.6.1** — 2026-08-20 11:30 — agent-two 根據主人指示修訂(主人 09:33 抓到 §4.4.3 規則 5 bug + 11:14 同意 binding 設計)
+  - 解決:`A` prefix 跟 §4.4.2 Q&A 範例格式太像，即使不標作者讀者還是會誤把 master 寫的當作 agent 回答(09:33 主人實戰抓 bug)
+  - 解決:section body 邊界不明確，agents parse thread 可能誤判(11:11 主人提 `{...}` 解法)
+  - 解決:agent 沒規範「討論過程盡可能自行決策」原則，會一遇問題就丟給主人(11:14 主人提 escalation 原則)
+  - 設計:master 指示統一 prefix `📝 指示`(讀者一眼識別)，`{...}` section body 邊界符，decision 移到 body 末尾
+  - 設計:escalation 跟 `awaiting-decision` 對稱設計(`flags.awaiting-master-decision` 由 agent 設，主人寫下一條自動清)
+  - §0 version bump v1.6 → v1.6.1
+  - §4.4.2 範例:加 `{...}` body 邊界 + master 用 `📝 指示` prefix + decision 移 body 末尾
+  - §4.4.3 規則 5 重寫:master 統一 prefix + `{...}` body + decision 移到 body
+  - §4.4.3 規則 6 新增:`{...}` 邊界符適用所有 append
+  - §4.4.4 結案歸屬:加 `closer: master` 行
+  - §4.4.5 新章節:Master escalation 原則(謹慎升級、何時 escalate、機制、反面教材)
+  - §6.4 Append 規範:加 `{...}` 邊界要求
+  - §6.5 「判斷來源」段修:`A · <ISO-8601>` 改成 `📝 指示 · <ISO-8601>`(因為 v1.6.1 不再有『A 模式』)
+  - 對應 `bulletin/scripts/writeback.py`:統一 master prefix `📝 指示`、body 用 `{...}` 包、decision 移 body 末尾、新增 `action=escalate` 設 `flags.awaiting-master-decision`、master 寫入自動清該 flag
+  - 對應 `bulletin/scripts/sync_bulletin.py`:加 `pending_for_master` 過濾(frontmatter.flags.awaiting-master-decision == "master" 且 status != done/cancelled)
+  - 對應 `bulletin/index.html`:加「待主人回覆」tab
+  - 對應 `bulletin/view.html`:thread 有 `awaiting-master-decision` flag 時顯示視覺提示
 
 - **v1.6** — 2026-08-20 09:00 — agent-two 根據主人指示新增 §6.5 Master 指示讀取責任 + §4.4.3 規則 5
   - 解決:主人透過 view.html / index.html QA form 下的指示,被 section header 的 `· two` 誤標為「二寶講的」,其他 agent 可能略過不讀

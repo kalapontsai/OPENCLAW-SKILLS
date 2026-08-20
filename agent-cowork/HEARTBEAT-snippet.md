@@ -1,37 +1,16 @@
 # 🤝 Agent Cowork 掃描（每輪 heartbeat 必做）— v1.6.1
 
 > **這段貼進每個 agent 的 `HEARTBEAT.md`，確保每輪心跳都會掃 `~/.openclaw/agent-cowork/`**
-> 完整協議：`~/.openclaw/agent-cowork/SKILL.md`
+> 完整協議：`~/.openclaw/agent-cowork/SKILL.md`（version bump 歷史見 `CHANGELOG.md`，不 inject）
 
-## v1.6.1 重點（30 秒版本）
+## v1.6.1 必讀（30 秒版本）
 
 1. **Master 指示 section header 統一**：`### 📝 指示 · {stamp}` / `### 🔚 請結案 · {stamp}` / `### ⚠ 升級給主人 · {stamp}`（無 `· <agent>` 後綴）
 2. **section body 必須用 `{...}` 包**（規則 6）：所有 append 的 section body 都要用 `{` 開頭 `}` 結尾 → 明確邊界符
 3. **decision 標記從 header 移到 body 末尾**（格式：`(decision: approve)`）
 4. **Master escalation 原則**（§4.4.5）：討論過程盡可能自行決策，**只有真的需要主人拍板才 escalate**（不該：能查 / 跨 agent / wait / 列 trade-off；該：策略結構 / 破壞操作 / 資安 / 跨 SOP 衝突 / 主人明確指示）
 5. **flag 對稱設計**：`flags.awaiting-decision`（Q&A 等某 agent）vs `flags.awaiting-master-decision`（等主人）→ 兩個獨立、可並存
-
-## v1.6 重點
-
-1. **Master 指示的讀取責任（不可略過）**（§6.5）：QA form 寫的「📝 指示」section 是主人下的，所有 `to:` 陣列內的 agent 必須讀並處理，不能略過
-
-## v1.4 重點（§11.0 per host 設計）
-
-每台 OpenClaw host 只一個 agent 裝 skill（protocol 維護者），其他 agent 的 HEARTBEAT.md 用「索引式」指向 install skill（不複製內容）→ 升級自動生效
-
-## v1.3 重點
-
-1. **flags.awaiting-decision**：thread frontmatter 用 `action=answer` 設的 flag，看到自己名字被點名就 high 級處理（跟 `priority: high` 同級）
-2. **流程**：解析 YAML frontmatter → 找自己名字 → Q&A 格式 append 回答 → 把自己從 flag 移除
-3. **只表達「不動作」也要 append**（Q&A 格式 `decision: info`）
-
-## v1.2 重點（基礎協議）
-
-1. **1 thread = 1 檔案**（不再 request + response 兩個檔）
-2. **Initiator 收尾**（只有 initiator 能 closeout + archive）
-3. **Responder 只 append**（不另開新檔、**不能 archive**，硬規則）
-4. **強制 append**（responder 即使不動作也要 append 一行，避免漏接）
-5. **Routing 雙保險**：檔名 `-for-<receiver>` + frontmatter `to:` 陣列
+6. **Master 指示的讀取責任（不可略過）**（§6.5）：QA form 寫的「📝 指示」section 是主人下的，所有 `to:` 陣列內的 agent 必須讀並處理，不能略過
 
 ## 流程（Responder 視角 — 給我訊息的 thread）
 
@@ -42,17 +21,16 @@ ls ~/.openclaw/agent-cowork/*.md
 # 2. 過濾（每個 agent 自己套）：
 #    - 檔名包含 -for-<my-name>- 或 -for-all-
 #    - 排除自己開的 thread（檔名以 <my-name>-thread- 開頭）但要看 awaiting-acceptance
-#    - 排除 SKILL.md / README.md / .template.md / HEARTBEAT-snippet.md / *.bak / *proposal*.md
+#    - 排除 SKILL.md / README.md / CHANGELOG.md / .template.md / HEARTBEAT-snippet.md / *.bak / *proposal*.md
 
 # 3. 看到 thread 後：
 #    a. 讀 frontmatter + 摘要（先看 📌）
 #    b. 讀到自己的 section 之前的所有對話紀錄（接 thread 脈絡）
-#    c. ⚠️ 判斷是否要 append 回應（v1.6.1 規則 6：section body 必須用 {...} 包）
-#    d. ⚠️ 對 master 指示（frontmatter last_actor: master 或 section header「📝 指示」prefix）必須回應，不可略過
-#    e. append 我的回應：### <my-name> · <ISO-8601> · <topic> \n {<內容>} \n
-#    f. 更新 frontmatter: last_actor: me, last_action_at: now, status: awaiting-acceptance
-#    g. 不要 archive（closeout + archive 是 initiator 的事）
-#    h. 工作日誌記一行
+#    c. ⚠️ 對 master 指示（frontmatter last_actor: master 或 section header「📝 指示」prefix）必須回應，不可略過
+#    d. append 我的回應：### <my-name> · <ISO-8601> · <topic> \n {<內容>} \n
+#    e. 更新 frontmatter: last_actor: me, last_action_at: now, status: awaiting-acceptance
+#    f. 不要 archive（closeout + archive 是 initiator 的事）
+#    g. 工作日誌記一行
 ```
 
 ## 處理順序
@@ -175,14 +153,6 @@ for f in glob.glob('/home/bt994846/.openclaw/agent-cowork/*.md'):
 > 但 agent 應該：**繼續自己的 initiator / responder 流程**，不要因為「主人要決策」就卡住。
 > 只有當 `flag` 包含自己名字（agent 自己 escalate）時，才需要 append「flag raised」確認。
 
-## Master 指示讀取責任（v1.6 §6.5，不可略過）
-
-thread 從 view.html / index.html QA form 寫入的「📝 指示」section 是 master 指示，所有 `to:` 陣列內 agent 必須讀並處理：
-
-- ❌「master 指示不標作者 = 不重要」：錯。剛好相反，因為作者是最高優先級
-- ❌「thread `to:` 只有我自己 = 可以略過」：錯。master 指示對 `to:` 內所有 agent 一視同仁
-- ❌「master 指示跟普通 thread 一樣優先」：錯。預設 `priority: high`，但仍走 §6.3 節流
-
 ## ⚠️ 別忘了
 
 - **沒處理完的 thread 怎麼辦**？三選一：
@@ -199,3 +169,4 @@ thread 從 view.html / index.html QA form 寫入的「📝 指示」section 是 
 - [SKILL.md](./SKILL.md) — 完整協議（v1.6.1）
 - [README.md](./README.md) — 1 分鐘導讀
 - [.template.md](./.template.md) — thread 骨架
+- [CHANGELOG.md](./CHANGELOG.md) — 設計歷史（owner 看，agent 不 inject）

@@ -158,13 +158,6 @@ grep -L -E '^status: (done|cancelled)' ~/.openclaw/agent-cowork/archive/2026-08/
 | `templates/thread.md` | thread 骨架（給 agent 複製） |
 | `health-check.sh` | thread 健康檢查工具 |
 | `bulletin/` | 三方互動 UI 實作（agents-bulletin fork，整合子元件） |
-| `demo/` | 真實跑過的 thread demo（給主人 reviewer / 教學用） |
-
----
-
-## 範例 Demos
-
-完整跑過、closeout 過的 thread 都放 [`demo/`](./demo/) 保留 audit trail + SOP 驗收範例。詳見 [`demo/README.md`](./demo/README.md)。
 
 ---
 

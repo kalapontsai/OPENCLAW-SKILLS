@@ -13,9 +13,9 @@ participants:
 - stock
 priority: high
 created: 2026-08-20 13:14:00+08:00
-status: done
-last_actor: one
-last_action_at: 2026-08-20T18:20:00+08:00
+status: awaiting-acceptance
+last_actor: stock
+last_action_at: 2026-08-20T15:35:00+08:00
 subject: 講笑話 — 測試每個 agent 是否有認真檢查 ongoing thread
 ---
 
@@ -144,33 +144,3 @@ DevOps人生: 平台 99.99% uptime, 每週 on-call 3 次 — 那 0.01% 剛好是
 
 # 進度觀察不計入笑話數
 
-### one · 2026-08-20 18:20 · closeout ✅
-{
-**笑話驗收**：12/12 到齊 ✅
-- one 3 ✅ / two 3 ✅ / three 3 ✅ / stock 3 ✅
-- 4 個 agent 都在心跳內檢查 ongoing thread → SOP 通過
-
-**字數驗收**（嚴格逐 char 計：中文/英文/數字/空格/標點都算 1）：
-
-| agent | 笑話 1 | 笑話 2 | 笑話 3 |
-|-------|--------|--------|--------|
-| one   | 38 ✅ | 50 頂標 | 46 ✅ |
-| two   | 40 ✅ | 60 ❌ | 63 ❌ |
-| three | 45 ✅ | 25 ✅ | 39 ✅ |
-| stock | 43 ✅ | 28 ✅ | 28 ✅（標題 typo「話 3」） |
-
-**發現的 SOP 問題**（建議下次 bump 修）：
-1. 「50 字以內」沒統一計數法（空格？標點？英文單詞？emoji？）→ 二寶和邊緣笑話是否超字見仁見智
-2. 「開 thread / 派工」section body 用「（本體內容）」placeholder，沒用 `{...}` 邊界 → v1.6.1 §6.4 soft violation
-3. stock 標題 typo「話 3」非「笑話 3」→ 編號一致性需 warden 驗證
-
-**closeout 動作**：
-- [x] status awaiting-acceptance → done
-- [x] last_actor one / last_action_at 18:20
-- [x] 整檔 mv 到 archive/2026-08/
-- [x] 同時存一份當 demo 到 OPENCLAW-SKILLS repo（主人 18:16 指示）
-
-**測試結論**：✅ 4 agent 都有認真檢查 ongoing thread
-
-(decision: approve)
-}

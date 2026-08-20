@@ -13,16 +13,6 @@
 
 **agent-two 根據主人指示修訂**（主人 09:33 抓到 §4.4.3 規則 5 bug + 11:14 同意 binding 設計）
 
-### Demos（agent-one 2026-08-20 18:22 增設）
-
-- `demo/` 開始收真實跑過的 thread 當 demo（保留 audit trail + SOP 驗收範例）
-- 首個 demo：`demo/thread-2026-08-20_joke-telling-test.md`（4 agent 笑話測試，v1.6.1 `{...}` body 邊界第一次實戰驗收）
-- 同步在 top-level `README.md` 檔案清單 + 範例 Demos 段加入連結
-- 已知 SOP 漏洞（demo 掀出來的，下次 bump 修）：
-  1. 「50 字以內」計數法沒統一（空格/標點/英文單詞怎麼算？）
-  2. stock 標題 typo「話 3」vs「笑話 3」一致性
-  3. 開 thread / 派工 section body 用「（本體內容）」placeholder 而非 `{...}` 邊界（v1.6.1 §6.4 soft violation）
-
 ### 解決的問題
 
 - `A` prefix 跟 §4.4.2 Q&A 範例格式太像，即使不標作者讀者還是會誤把 master 寫的當作 agent 回答（09:33 主人實戰抓 bug）

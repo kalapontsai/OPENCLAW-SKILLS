@@ -8,9 +8,9 @@
 > 取代「用 `sessions_send` 同步呼叫」做不到的背景任務、批量工作、跨 session 持續對話
 
 - **Owners:** agent-one（維護 / 立約）/ agent-stock、agent-two、agent-three（消費者）
-- **Version:** v1.6.1 — 2026-08-20 修訂（修正 master 指示 section header 設計:統一 prefix「📝 指示」並用 `{...}` 明確 section body 邊界；新增 §4.4.5 Master escalation 原則 + `flags.awaiting-master-decision` 機制；bulletin writeback/sync/UI 同步修）
-- **生效:** 自本版起新發送的 thread
-- **向前相容:** v1.1 雙檔 thread 不強制 migrate，自然 archive 即可
+- **Version:** v1.7.0 — 2026-08-22 修訂（新增 §6.6「維護者全域 thread 摘要匯報 SOP」：負責維護管理的 agent 每輪 heartbeat 主動整理全域 thread 狀態、變動時匯報至 telegram；§11.0 強調維護者額外負擔此 SOP）
+- **向前相容:** v1.6.1 thread 不需 migrate，新 SOP 是「觀察者視角」不影響既有 §6.1/§6.2 流程
+- **生效:** 自本版起維護者的 heartbeat 循環
 
 ---
 
@@ -435,6 +435,140 @@ Thread 從 view.html / index.html 的 QA form 寫入的「📝 指示」section 
 
 ---
 
+## 6.6 維護者全域 thread 摘要匯報 SOP（v1.7.0 新增）
+
+> **適用範圍：負責維護管理的 agent**（per host 設計的「安裝 agent」，見 §11.0）
+> 本機目前 = agent-one（大寶）
+> 其他 agent 不需執行本段，只走 §6.1 / §6.2
+
+### 為什麼需要
+
+主人隨時想知道「cowork 全域現在怎樣」，但不想自己 ls 主目錄。所以維護者（agent-one）每輪 heartbeat 主動整理全域 thread 摘要，**變動時**匯報至主人 telegram。
+
+### 不影響既有流程
+
+- §6.1 Responder 流程照走（自己開 / 等自己的 thread 仍要 append）
+- §6.2 Initiator closeout 流程照走（自己 initiator 的 thread 仍要驗收 + archive）
+- **§6.6 是「額外」工作，「不取代」既有 SOP**
+
+### 動作
+
+```python
+# 每輪 heartbeat 跑一次（緊接在 §6.3 節流之後）
+1. 列出 ~/.openclaw/agent-cowork/*.md
+   - 排除 SKILL.md / README.md / CHANGELOG.md / .template.md / HEARTBEAT-snippet.md / *.bak / *proposal*.md
+
+2. **不過濾 -for-**（要看全域，不只看我）
+   - 解析每個 thread 的 frontmatter（thread_id / status / priority / initiator / to / last_actor / last_action_at / flags.awaiting-master-decision / subject）
+
+3. 分類統計：
+   - total        = N (主目錄活躍 thread 總數)
+   - for_me       = M (to 陣列含 me 或 -for-<me>-)
+   - awaiting_master = K (flags.awaiting-master-decision == "master" 且 status != done/cancelled)
+   - critical     = L (status=open + priority=critical)
+   - awaiting_my_acceptance = I (initiator=me + status=awaiting-acceptance)
+   - stale        = J (last_action_at 超過 72 小時前 + status != done/cancelled)
+
+4. 節流決策：
+   - 計算 hash = sorted([f"{t.thread_id}|{t.status}|{t.priority}|{t.last_action_at}|{t.flags.get('awaiting-master-decision','')}" for t in threads])
+   - 比對上次送出的 hash（記在 ~/.openclaw/agent-cowork/.summary-cache.json）
+   - hash 變動 → 送出
+   - hash 不變 → 不送（除非上次送出已過 6 小時，送一次「狀態心跳」）
+   - 首次執行（無 cache）→ 立刻送一次建立 baseline
+
+5. 送出（只對維護者 = agent-one）：
+   - 用 message 工具送到主人 telegram（chat_id 從 USER.md 抓，這台 = 8774080801）
+   - 格式：手機友善（<pre> 等寬、≤ 8 個 thread 列在訊息裡）
+
+6. 更新 cache：寫 hash + sent_at 到 .summary-cache.json
+```
+
+### 摘要格式（手機友善）
+
+```
+📋 Cowork 全域摘要 (HH:MM)
+
+▸ 總數 N | 給我 M | 等主人 K | critical L
+
+🔴 critical (L):
+• <subject> · <initiator>→<to> · <age>
+
+🟡 等主人 (K):
+• <subject> · <initiator>→<to> · <age>
+
+🟢 給我 (M):
+• <subject> · <initiator>→<to> · <status>
+
+📦 等我驗收 (I):
+• <subject> · <last_actor> · <age>
+
+⏰ 停滯 > 3 天 (J):
+• <subject> · <last_actor> · <age>
+
+（...還有 X 個未列）
+```
+
+- `age` 格式：「Nh」< 24h、「Nd」≥ 24h（從 `last_action_at` 算到現在）
+- thread 列數上限：≤ 8 個在訊息內，其餘「...還有 X 個未列」一行帶過
+- 訊息長度上限：≤ 1500 字元（Telegram 安全長度，避免截斷）
+- 沒 thread 時送「📋 Cowork 全域摘要 (HH:MM) — 主目錄目前 0 個活躍 thread」
+
+### 限制
+
+- 每輪心跳最多送 1 次（節流）
+- 不寫 thread（**§6.6 是觀察者視角**，不 append、不 archive、不動 frontmatter）
+- 不呼叫其他 agent（除非 critical 需升級，走 §4.4.5）
+
+### 失敗處理
+
+- message 工具失敗 → 寫 daily memory + 留 stderr，不 escalate（下次 heartbeat 重試）
+- cache 檔壞掉 → 當首次處理，重新建立 baseline
+- 解析 frontmatter 失敗 → 跳過該 thread，記 warning 到 daily memory
+
+### 跟 §6.1 / §6.2 的關係
+
+| SOP | 誰做 | 動作 |
+|-----|------|------|
+| §6.1 Responder | 每個 agent | 處理 `-for-me-` 的 thread → append |
+| §6.2 Initiator closeout | initiator | 驗收 + archive |
+| **§6.6 維護者摘要匯報** | **維護者 only** | **掃全域 → 整理 → 變動時送 telegram** |
+
+### 反模式
+
+- ❌「我只是一般 agent，不需要做 §6.6」→ 對。但若主人指定你當該 host 的維護者就要做
+- ❌「每輪都送」→ 會洗主人。**必須節流**（hash + 6hr 心跳）
+- ❌「把整個 thread 內容都貼進 telegram」→ 太長。用摘要 + subject + status 即可
+- ❌「用 stdout 印出來」→ 主人看不到。**必須用 message 工具送到 telegram**
+- ❌「順手幫忙處理」→ 違規。§6.6 是觀察者，不 append、不 archive
+
+### 範例：維護者跑一次 §6.6
+
+假設主目錄有以下 thread：
+
+1. `stock-thread-2026-08-22_1454_retirement-decision-v2-for-two.md`（status=open, priority=high, 1h ago）
+2. `one-thread-2026-08-22_1500_summary-report-for-all.md`（status=open, priority=normal, 30min ago, flags.awaiting-master-decision=master）
+3. `two-thread-2026-08-21_0900_v1-bulletin-bug-for-one.md`（status=awaiting-acceptance, priority=normal, 6h ago）
+
+維護者（agent-one）跑 §6.6 後送出：
+
+```
+📋 Cowork 全域摘要 (15:35)
+
+▸ 總數 3 | 給我 1 | 等主人 1 | critical 0
+
+🟡 等主人 (1):
+• summary-report · one→all · 30min
+
+🟢 給我 (1):
+• v1-bulletin-bug · two→one · awaiting-acceptance · 6h
+
+📦 等我驗收 (0):
+
+⏰ 停滯 > 3 天 (0):
+```
+
+---
+
 ## 7. 範例（v1.2 重寫）
 
 ### 範例 1：agent-stock開 thread 給agent-two
@@ -769,4 +903,4 @@ systemctl --user restart openclaw-gateway
 
 ---
 
-*維護者：agent-one · 立約：2026-08-17 13:42 Asia/Taipei · 修訂：2026-08-19 22:46 (v1.5)*
+*維護者：agent-one · 立約：2026-08-17 13:42 Asia/Taipei · 修訂：2026-08-22 15:35 (v1.7.0)*

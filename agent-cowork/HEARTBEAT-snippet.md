@@ -1,9 +1,9 @@
-# 🤝 Agent Cowork 掃描（每輪 heartbeat 必做）— v1.6.1
+# 🤝 Agent Cowork 掃描（每輪 heartbeat 必做）— v1.7.0
 
 > **這段貼進每個 agent 的 `HEARTBEAT.md`，確保每輪心跳都會掃 `~/.openclaw/agent-cowork/`**
 > 完整協議：`~/.openclaw/agent-cowork/SKILL.md`（version bump 歷史見 `CHANGELOG.md`，不 inject）
 
-## v1.6.1 必讀（30 秒版本）
+## v1.7.0 必讀（30 秒版本）
 
 1. **Master 指示 section header 統一**：`### 📝 指示 · {stamp}` / `### 🔚 請結案 · {stamp}` / `### ⚠ 升級給主人 · {stamp}`（無 `· <agent>` 後綴）
 2. **section body 必須用 `{...}` 包**（規則 6）：所有 append 的 section body 都要用 `{` 開頭 `}` 結尾 → 明確邊界符
@@ -11,6 +11,7 @@
 4. **Master escalation 原則**（§4.4.5）：討論過程盡可能自行決策，**只有真的需要主人拍板才 escalate**（不該：能查 / 跨 agent / wait / 列 trade-off；該：策略結構 / 破壞操作 / 資安 / 跨 SOP 衝突 / 主人明確指示）
 5. **flag 對稱設計**：`flags.awaiting-decision`（Q&A 等某 agent）vs `flags.awaiting-master-decision`（等主人）→ 兩個獨立、可並存
 6. **Master 指示的讀取責任（不可略過）**（§6.5）：QA form 寫的「📝 指示」section 是主人下的，所有 `to:` 陣列內的 agent 必須讀並處理，不能略過
+7. **🆕 維護者全域 thread 摘要匯報（§6.6）**（v1.7.0 新增）：負責維護管理的 agent（per host 1 個，§11.0）每輪 heartbeat 掃全域 thread，**有變動才**匯報至 telegram（hash 節流）；**非維護者不執行本段**
 
 ## 流程（Responder 視角 — 給我訊息的 thread）
 
@@ -153,6 +154,77 @@ for f in glob.glob('/home/bt994846/.openclaw/agent-cowork/*.md'):
 > 但 agent 應該：**繼續自己的 initiator / responder 流程**，不要因為「主人要決策」就卡住。
 > 只有當 `flag` 包含自己名字（agent 自己 escalate）時，才需要 append「flag raised」確認。
 
+## 維護者專屬 SOP（§6.6，v1.7.0 新增）
+
+> **只適用「負責維護管理的 agent」**（§11.0 per host 設計的安裝 agent）。
+> 本機目前 = agent-one（大寶）。其他 agent **跳過本段**。
+> 本段是「觀察者視角」，**不 append、不 archive、不動 frontmatter**。
+
+### 動作（緊接在 §6.3 節流之後）
+
+```python
+1. 掃主目錄全部 thread（不過濾 -for-）
+   - 排除 SKILL/README/CHANGELOG/.template/HEARTBEAT-snippet/*.bak/*proposal*.md
+   - parse frontmatter 取：thread_id / status / priority / initiator / to / last_actor / last_action_at / flags.awaiting-master-decision / subject
+
+2. 分類統計：
+   - total = N | for_me = M | awaiting_master = K | critical = L
+   - awaiting_my_acceptance = I | stale (last_action_at > 72h ago) = J
+
+3. 節流：
+   - hash = sorted([f"{tid}|{st}|{pr}|{laa}|{amd}" for t in threads])
+   - cache 位置：~/.openclaw/agent-cowork/.summary-cache.json
+   - hash 變動 → 送
+   - hash 不變 → 不送（除非上次送已 6hr，送狀態心跳）
+   - 無 cache → 立刻送 baseline
+
+4. 送出：
+   - message 工具 → 主人 telegram（USER.md 抓 chat_id，這台 = 8774080801）
+   - 格式：<pre> 等寬、≤ 8 個 thread、≤ 1500 字元、age 用 Nh/Nd
+
+5. 更新 cache：寫 hash + sent_at
+```
+
+### 摘要格式
+
+```
+📋 Cowork 全域摘要 (HH:MM)
+
+▸ 總數 N | 給我 M | 等主人 K | critical L
+
+🔴 critical (L):
+• <subject> · <initiator>→<to> · <age>
+
+🟡 等主人 (K):
+• <subject> · <initiator>→<to> · <age>
+
+🟢 給我 (M):
+• <subject> · <initiator>→<to> · <status>
+
+📦 等我驗收 (I):
+• <subject> · <last_actor> · <age>
+
+⏰ 停滯 > 3 天 (J):
+• <subject> · <last_actor> · <age>
+
+（...還有 X 個未列）
+```
+
+### 限制
+
+- 每輪心跳最多送 1 次
+- 沒 thread 也要送狀態（變動時送，主目錄 0 → 也算變動）
+- message 失敗 → 寫 daily memory，下次 heartbeat 重試
+- 不呼叫其他 agent、不寫 thread
+
+### 反模式
+
+- ❌ 每輪都送 → 洗主人
+- ❌ 把整個 thread 內容貼 telegram → 太長
+- ❌ 用 stdout → 主人看不到
+- ❌ 順手幫忙 append → 違規（觀察者視角）
+- ❌ 一般 agent 也做本段 → 不需要，會跟其他 host 上的維護者搶送
+
 ## ⚠️ 別忘了
 
 - **沒處理完的 thread 怎麼辦**？三選一：
@@ -166,7 +238,7 @@ for f in glob.glob('/home/bt994846/.openclaw/agent-cowork/*.md'):
 
 ## 詳見
 
-- [SKILL.md](./SKILL.md) — 完整協議（v1.6.1）
+- [SKILL.md](./SKILL.md) — 完整協議（v1.7.0；§6.6 維護者全域摘要匯報 SOP 新章節）
 - [README.md](./README.md) — 1 分鐘導讀
 - [.template.md](./.template.md) — thread 骨架
 - [CHANGELOG.md](./CHANGELOG.md) — 設計歷史（owner 看，agent 不 inject）

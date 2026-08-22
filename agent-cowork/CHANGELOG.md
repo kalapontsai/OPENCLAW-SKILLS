@@ -3,9 +3,51 @@
 > **agent-cowork 協議的完整變更歷史**
 >
 > ⚠️ **這份檔案 agent 不會讀**（不 inject 到 context）。只給 owner / 維護者 / reviewer 看。
-> 當前 SKILL.md / HEARTBEAT-snippet.md **只留最新版內容**（v1.6.1），歷史搬到此檔。
+> 當前 SKILL.md / HEARTBEAT-snippet.md **只留最新版內容**（v1.7.0），歷史搬到此檔。
 >
 > 維護者：agent-one（protocol 維護者，見 SKILL §11.0 per host 設計）
+
+---
+
+## v1.7.0 — 2026-08-22 15:35
+
+**agent-one 根據主人指示新增 §6.6 維護者全域 thread 摘要匯報 SOP**
+
+### 解決的問題
+
+- 主人想隨時知道 cowork 全域狀況（哪些 thread 在跑、哪些卡住、哪些等誰），但不該自己 ls 主目錄
+- 維護者（agent-one）之前雖然有 §6.1 心跳 SOP，但只處理「自己的 thread」，主人看不到全局
+- 沒有定期的「全域 snapshot 推送」機制
+
+### 設計決策
+
+- **誰做**：只有「負責維護管理的 agent」（§11.0 per host 安裝 agent，本機 = agent-one）→ 不會跟其他 host 的維護者搶送、責任集中
+- **觀察者視角**：§6.6 是「掃全域 + 整理 + 推送」，**不 append、不 archive、不動 thread**（跟 §6.1/§6.2 完全分流）
+- **節流設計**：用 hash(thread_id|status|priority|last_action_at|flag) 跟 `.summary-cache.json` 比對，**有變動才送**；hash 不變但距上次送已 6hr → 送一次「狀態心跳」；無 cache → 立刻送 baseline 建立
+- **送出格式**：手機友善（<pre> 等寬、≤ 8 個 thread 列、≤ 1500 字元、age 用 Nh/Nd）
+- **失敗處理**：message 失敗 → 寫 daily memory + stderr，**不 escalate**（下次 heartbeat 重試，避免跟主人正事搶頻寬）
+
+### 改動清單
+
+- §0 version bump v1.6.1 → v1.7.0（向前相容：v1.6.1 thread 不需 migrate）
+- SKILL.md §6.6 新章節：「維護者全域 thread 摘要匯報 SOP」（動作 / 格式 / 限制 / 失敗處理 / 跟 §6.1 §6.2 關係 / 反模式 / 範例）
+- HEARTBEAT-snippet.md 標題 bump v1.6.1 → v1.7.0
+- HEARTBEAT-snippet.md 必讀段加第 7 項（§6.6 維護者摘要匯報）
+- HEARTBEAT-snippet.md 新增「維護者專屬 SOP（§6.6）」段（動作 / 格式 / 限制 / 反模式）
+- HEARTBEAT-snippet.md 詳見 bump v1.6.1 → v1.7.0
+- README.md 版本字串 v1.4 → v1.7.0（修 8/20 漏 bump 的字串）
+- README.md 新增「維護者全域 thread 摘要匯報」段
+- templates/thread.md footer 版本字串 v1.2 → v1.7.0
+
+### 跟既有 SOP 的關係
+
+| SOP | 誰做 | 動作 |
+|-----|------|------|
+| §6.1 Responder | 每個 agent | 處理 `-for-me-` thread → append |
+| §6.2 Initiator closeout | initiator | 驗收 + archive |
+| **§6.6 維護者摘要匯報** | **維護者 only** | **掃全域 → 整理 → 變動時送 telegram** |
+
+三段獨立運作，維護者照走 §6.1/§6.2 處理自己的 thread + §6.6 觀察全域。
 
 ---
 

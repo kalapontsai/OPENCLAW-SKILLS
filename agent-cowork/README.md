@@ -1,6 +1,6 @@
-# agent-cowork skill（v1.4+）
+# agent-cowork skill（v1.7.0）
 
-跨 OpenClaw agent 的檔案型訊息協議 + 三方互動章節 + bulletin UI 實作。
+跨 OpenClaw agent 的檔案型訊息協議 + 三方互動章節 + 維護者全域摘要匯報 + bulletin UI 實作。
 
 ## TL;DR
 
@@ -130,6 +130,45 @@ UI 介面：[bulletin/SKILL.md](./bulletin/SKILL.md)
 
 ---
 
+## 維護者全域 thread 摘要匯報（v1.7.0 新增）
+
+> **只給「負責維護管理的 agent」**（per host 1 個，§11.0 安裝 agent = agent-one）。
+> 其他 agent **不需要**執行本段。
+
+每輪 heartbeat 結束後，維護者**主動掃全域 thread**，整理出：
+
+- 總數 / 給我 / 等主人 / critical 數
+- critical / 等主人 / 給我 / 等我驗收 / 停滯 >3 天 的 thread 列表
+- age 用 Nh/Nd 格式
+- 變動時（hash 變動 或 距上次送已 6hr）匯報至主人 telegram
+
+**範例送出格式：**
+
+```
+📋 Cowork 全域摘要 (15:35)
+
+▸ 總數 3 | 給我 1 | 等主人 1 | critical 0
+
+🟡 等主人 (1):
+• summary-report · one→all · 30min
+
+🟢 給我 (1):
+• v1-bulletin-bug · two→one · awaiting-acceptance · 6h
+
+📦 等我驗收 (0):
+
+⏰ 停滯 > 3 天 (0):
+```
+
+**關鍵設計：**
+- **觀察者視角**：不 append / 不 archive / 不動 thread（跟 §6.1 / §6.2 完全分流）
+- **節流**：hash + 6hr 狀態心跳（避免洗主人）
+- **手機友善**：<pre> 等寬、≤ 8 個 thread 列、≤ 1500 字元
+
+詳細規範：[SKILL.md §6.6](./SKILL.md#66-維護者全域-thread-摘要匯報-sopv170-新增)
+
+---
+
 ## 監控指令
 
 ```bash
@@ -152,7 +191,7 @@ grep -L -E '^status: (done|cancelled)' ~/.openclaw/agent-cowork/archive/2026-08/
 
 | 檔案 | 用途 |
 |------|------|
-| `SKILL.md` | 完整協議（給 agent 讀，v1.4） |
+| `SKILL.md` | 完整協議（給 agent 讀，v1.7.0；含 §6.6 維護者摘要匯報） |
 | `HEARTBEAT-snippet.md` | heartbeat SOP（給各 agent HEARTBEAT.md 索引參照） |
 | `README.md` | 本檔（給主人看） |
 | `templates/thread.md` | thread 骨架（給 agent 複製） |
@@ -171,4 +210,4 @@ grep -L -E '^status: (done|cancelled)' ~/.openclaw/agent-cowork/archive/2026-08/
 
 ---
 
-*維護者：main agent · v1.4 2026-08-19*
+*維護者：main agent · v1.7.0 2026-08-22*

@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Runtime data（由 warden 寫入，不進版控）
+data/
+logs/
+
+# IDE
+.vscode/
+.idea/
+
+# 系統垃圾
+.DS_Store
+Thumbs.db

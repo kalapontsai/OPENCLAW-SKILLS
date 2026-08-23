@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Bulletin</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="container">
+  <header class="hdr">
+    <h1>Agent Bulletin</h1>
+    <p class="subtitle">agent-cowork 派工單看板 · 只供二寶操作</p>
+  </header>
+
+  <div class="toolbar">
+    <button id="refresh-btn" class="btn">↻ 刷新</button>
+    <span id="refresh-status" class="status">—</span>
+    <span id="last-sync" class="muted"></span>
+    <span class="spacer"></span>
+    <span class="muted">最後同步 polling 每 15 秒</span>
+  </div>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="in_progress" role="tab">進行中 <span class="cnt" id="cnt-in_progress">—</span></button>
+    <button class="tab" data-tab="pending_master" role="tab">🎩 待主人決策 <span class="cnt" id="cnt-pending_master">—</span></button>
+    <button class="tab" data-tab="paused" role="tab">暫停 <span class="cnt" id="cnt-paused">—</span></button>
+    <button class="tab" data-tab="closed" role="tab">結案 <span class="cnt" id="cnt-closed">—</span></button>
+  </nav>
+
+  <main>
+    <section id="panel-in_progress" class="panel active">
+      <table class="threads">
+        <thead><tr>
+          <th>發起時間</th><th>發起人</th><th>對象</th><th>狀態</th><th>優先</th><th>標題</th><th>動作</th>
+        </tr></thead>
+        <tbody id="tbody-in_progress"><tr><td colspan="7" class="empty">載入中…</td></tr></tbody>
+      </table>
+    </section>
+    <section id="panel-pending_master" class="panel">
+      <div class="banner">🎩 這些 thread 被 agent escalate(<code>flags.awaiting-master-decision</code>)，需要主人決策。 主人從 view.html 寫下一條 master section 會自動清 flag</div>
+      <table class="threads">
+        <thead><tr>
+          <th>發起時間</th><th>發起人</th><th>對象</th><th>標題</th><th>動作</th>
+        </tr></thead>
+        <tbody id="tbody-pending_master"><tr><td colspan="5" class="empty">沒有待主人回覆的 thread</td></tr></tbody>
+      </table>
+    </section>
+
+    <section id="panel-paused" class="panel">
+      <table class="threads">
+        <thead><tr>
+          <th>發起時間</th><th>發起人</th><th>對象</th><th>狀態</th><th>優先</th><th>標題</th><th>動作</th>
+        </tr></thead>
+        <tbody id="tbody-paused"><tr><td colspan="7" class="empty">沒有暫停的 thread</td></tr></tbody>
+      </table>
+    </section>
+
+    <section id="panel-closed" class="panel">
+      <table class="threads">
+        <thead><tr>
+          <th>發起時間</th><th>發起人</th><th>對象</th><th>狀態</th><th>結案時間</th><th>標題</th><th>動作</th>
+        </tr></thead>
+        <tbody id="tbody-closed"><tr><td colspan="7" class="empty">沒有結案的 thread</td></tr></tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer class="ftr">
+    <p>agent-bulletin · warden 跑在 WSL 端 · 寫入 thread 由 writeback handler 負責</p>
+  </footer>
+</div>
+
+<!-- Q&A 互動 Modal -->
+<div id="qa-modal" class="modal hidden" role="dialog">
+  <div class="modal-body">
+    <header>
+      <h3 id="qa-title">Q&A 互動</h3>
+      <button class="close" data-close aria-label="close">×</button>
+    </header>
+    <div class="qa-thread-info" id="qa-thread-info"></div>
+    <div class="qa-history-wrap">
+      <h4>對話紀錄尾段</h4>
+      <div class="qa-history" id="qa-history"></div>
+    </div>
+    <fieldset class="qa-form">
+      <legend>填寫回答 / 增加指示</legend>
+      <label>動作類型
+        <select id="qa-action">
+          <option value="answer">回答問題</option>
+          <option value="instruction">中途指示</option>
+          <option value="request_close">請結案</option>
+        </select>
+      </label>
+      <label>決定（選填，僅「回答」類有效）
+        <select id="qa-decision">
+          <option value="">— 無 —</option>
+          <option value="approve">approve</option>
+          <option value="request_changes">request_changes</option>
+          <option value="info">info</option>
+        </select>
+      </label>
+      <label>內容
+        <textarea id="qa-text" rows="6" placeholder="Markdown 可用…送出後會 append 進 thread 檔"></textarea>
+      </label>
+      <div class="actions">
+        <button id="qa-submit" class="btn primary">送出</button>
+        <button data-close class="btn">取消</button>
+      </div>
+      <p class="hint">⚠ 等大寶把 Q&A 區塊合進 <code>agent-cowork/SKILL.md</code> 後，完整介面才上線；目前先走 warden writeback handler。</p>
+    </fieldset>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+</body>
+</html>

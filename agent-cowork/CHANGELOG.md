@@ -3,9 +3,52 @@
 > **agent-cowork 協議的完整變更歷史**
 >
 > ⚠️ **這份檔案 agent 不會讀**（不 inject 到 context）。只給 owner / 維護者 / reviewer 看。
-> 當前 SKILL.md / HEARTBEAT-snippet.md **只留最新版內容**（v1.7.0），歷史搬到此檔。
+> 當前 SKILL.md / HEARTBEAT-snippet.md **只留最新版內容**（v1.8.0），歷史搬到此檔。
 >
 > 維護者：agent-one（protocol 維護者，見 SKILL §11.0 per host 設計）
+
+---
+
+## v1.8.0 — 2026-08-24 15:30
+
+**agent-one 根據主人 8/24 14:00 /goal 研究 thread（推薦方案 B）落地**
+
+### 解決的問題
+
+- HEARTBEAT-snippet.md 244 行塞太多敘事，每次 heartbeat 都要讀 200+ 行才能開工
+- HEARTBEAT.md 在 HEARTBEAT-snippet 旁重複敘述，改版就漏 sync（已踩過幾次）
+- duty 描述沒有 session 顆粒度（dashboard vs telegram 一視同仁）
+- operator 想 pause / resume duty 還要改檔，沒原生控制介面
+- TUI 看不出「這 session 現在是什麼 duty」
+
+### 設計決策
+
+- **互補不互替**：`/goal` 補 heartbeat 的「duty 敘事層」、cron 留「週期叫醒 + 節流」層
+- **三種標準 duty 字串**：`cowork-duty` / `cowork-maintainer` / `cowork-observer`（`cowork-` prefix 方便 grep）
+- **HEARTBEAT-snippet 從 244 行縮到 ~30 行索引式**
+- **HEARTBEAT.md 從每個 agent 各自塞 100+ 行 SOP 改成 `/goal`-driven 索引**（下一步由維護者 update）
+- **§6.7 規範邊界情境**：5 個 edge case（`/new` 重掛 / budget_limited / 單 goal / 多 host 沒統一 / agent 不能自 create）
+
+### 改動清單
+
+- §0 version bump v1.7.0 → v1.8.0（向前相容：v1.7.0 thread 不需 migrate）
+- SKILL.md §6.7 新章節：「OpenClaw `/goal` 整合」（8 子節：why / duty 字串 / 流程 / 邊界 / 對齊 / 反模式 / 驗證 / 升級銜接）
+- HEARTBEAT-snippet.md 整個從 244 行重寫到 ~30 行 `/goal`-driven 索引版
+- README.md 版本字串 v1.7.0 → v1.8.0，新增「`/goal` 整合」段
+- templates/thread.md footer 版本字串 v1.7.0 → v1.8.0
+- **未在 v1.8.0 動**：各 agent HEARTBEAT.md（主人指示：等下個 thread 開出來再由維護者統一 update；避免「SKILL 已 bump 但 agent 還讀 v1.7.0」的 split-brain 視窗）
+
+### 沒做什麼（v1.8.1+ 才考慮）
+
+- ❌ 真正的 system-event hook（`/new` 後自動補掛 goal）— 需 OpenClaw 平台支援，待 hook API
+- ❌ `cowork-` prefix 強制 grep 進 `summary_report.py` — 留給 v1.8.1 pilot 真跑時調整
+- ❌ agent-cowork bulletin `SKILL.md` bump — bulletin 是 fork 流程，v1.8.0 不影響
+- ❌ 各 agent HEARTBEAT.md 自動 update — 主人明確指示：等下一個 thread 開才動
+
+### 對齊其他協議
+
+- 跟 v1.6.1 `{...}` 邊界符不相關（純協議層升級）
+- 跟 v1.7.0 §6.6 維護者 SOP **完全相容**（summary_report.py 不動）
 
 ---
 

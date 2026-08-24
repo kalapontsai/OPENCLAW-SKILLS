@@ -8,9 +8,9 @@
 > 取代「用 `sessions_send` 同步呼叫」做不到的背景任務、批量工作、跨 session 持續對話
 
 - **Owners:** agent-one（維護 / 立約）/ agent-stock、agent-two、agent-three（消費者）
-- **Version:** v1.7.0 — 2026-08-22 修訂（新增 §6.6「維護者全域 thread 摘要匯報 SOP」：負責維護管理的 agent 每輪 heartbeat 主動整理全域 thread 狀態、變動時匯報至 telegram；§11.0 強調維護者額外負擔此 SOP）
-- **向前相容:** v1.6.1 thread 不需 migrate，新 SOP 是「觀察者視角」不影響既有 §6.1/§6.2 流程
-- **生效:** 自本版起維護者的 heartbeat 循環
+- **Version:** v1.8.0 — 2026-08-24 修訂（新增 §6.7「OpenClaw `/goal` 整合」：heartbeat cron 留下當週期叫醒、duty 文字改由 session-scoped `/goal` 承擔、HEARTBEAT-snippet 從 244 行縮到 ~30 行；§11.4 升級 SOP 補掛 goal hook）
+- **向前相容:** v1.7.0 thread / bulletin 不需 migrate；§6.6 觀察者 SOP 不受 `/goal` 設計影響
+- **生效:** 自本版起各 agent 的 HEARTBEAT.md 採 `/goal`-driven 模式（per host 由維護者統一 update）
 
 ---
 
@@ -566,6 +566,103 @@ Thread 從 view.html / index.html 的 QA form 寫入的「📝 指示」section 
 
 ⏰ 停滯 > 3 天 (0):
 ```
+
+---
+
+## 6.7 OpenClaw `/goal` 整合（v1.8.0 新增）
+
+> **核心想法：** 把 agent-cowork 的 SOP 從「全寫在 `HEARTBEAT-snippet.md`」拆成「cron 叫醒 + 索引式 snippet + session goal 文字」三層。`/goal` 補 heartbeat 的敘事層，不取代 cron 的排程層。
+
+### 6.7.1 為什麼不能全替換（功能矩陣）
+
+```
+功能           heartbeat cron   /goal
+────           ────────────    ────
+週期叫醒       ✅ cron          ❌
+節流（hash）   ✅ script        ❌
+duty 持久化    ⚠️ 每次重注      ✅
+operator 控制  ✏️ 改檔          📋 /goal
+session 顆粒度 ❌ per-agent      ✅ 每 session
+TUI 可見性     ❌               ✅ footer
+跨 compact 留  ⚠️ 重新注入      ✅ goal persist
+/new 後留      n/a              ❌ 一併清
+```
+
+→ **互補不互替**。方案：**cron 留下 + 用 `/goal` 取代 HEARTBEAT-snippet 的 narrative**。
+
+### 6.7.2 三種標準 duty 字串
+
+```
+cowork-duty         — 一般 agent：掃主目錄、依 §6.1/§6.2 處理
+cowork-maintainer   — 維護者（per host 1 個，§11.0）：加跑 §6.6
+cowork-observer     — 只掃不處理，跨 agent 巡察
+```
+
+建議 goal 開頭用 `cowork-` prefix，便於 grep / 路由判斷。
+
+### 6.7.3 heartbeat 流程（30 行版，取代 v1.7.0 的 244 行）
+
+```bash
+# 1. get_goal() 拿現在 duty（model tool，自動 inject Active goal；
+#    HEARTBEAT.md 仍主動 call get_goal() 確保 budget_limited 也讀得到）
+goal=$(get_goal | sed -n 's/^Active goal: //p' | head -c 200)
+
+# 2. 路由
+case "$goal" in
+  *cowork-maintainer*)
+    # 維護者：§6.1/§6.2 + §6.6（throttle 維持 summary_report.py 內）
+    python3 ~/.openclaw/agent-cowork/scripts/summary_report.py || true
+    fallthrough ;;
+  *cowork-duty*|*cowork-observer*)
+    # 走 §6.1/§6.2；observer 跳過 append（只 ls）
+    ;;
+  *)
+    exit 0 ;;  # 沒 cowork goal → 跳過本輪
+esac
+
+# 3. 一次心跳節流（§6.3）：3 個 append / 1 critical / 1 closeout archive
+```
+
+> 完整 §6.1/§6.2/§6.6 流程仍在本檔，**不重述**（避免 snippet 膨脹）。
+
+### 6.7.4 邊界情境（必須設計進去）
+
+1. **`/new` / `/reset` 一併清掉 goal** → 解法：dispatch 流程 + supervisor 攔截 `/new` 後自動重掛 `cowork-duty`
+2. **`paused` / `blocked` / `budget_limited` / `complete` 不 inject Active goal** → 解法：HEARTBEAT.md 走 `get_goal()` 主動讀（不是依賴 inject）
+3. **單 session 只能 1 個 goal**（§6.7.5 `/goal` 規範） → 解法：cowork duty 與臨時任務競爭時，`/goal edit` 切換；或把 cowork duty 寫進 agent system prompt（不是 goal）
+4. **agent-cowork 多 agent host 沒有「統一 duty」機制** → 解法：每個 agent 各自掛 + `cowork-` prefix + §11.0 per host 設計保一致
+5. **model 不能自己 `create_goal`**（系統 prompt 規定） → 解法：在 agent-cowork 包裝的 system prompt 加「預設行為：create_goal cowork-duty」段；或走 dispatch hook 由 supervisor 掛
+
+### 6.7.5 與 OpenClaw `/goal` 工具的對齊
+
+- `get_goal()` tool — 讀現在 duty（model 隨時可 call）
+- `create_goal` — 建（agent 用需 system prompt 明確允許；本協議預設安裝 agent / supervisor 可觸發）
+- `update_goal` — 標 `complete` / `blocked`，model 不能 pause/resume/clear
+- `/new` / `/reset` 自動 clear current goal（owner 行為）
+
+### 6.7.6 反模式
+
+- ❌「用 `/goal` 取代 cron」→ 失敗（沒 scheduler 會睡死）
+- ❌「把整套 §6.1/§6.2/§6.6 塞進 goal 文字」→ 太長會被 truncate；goal 是人話一句話
+- ❌「goal 文字塞流程樹 / if-else」→ 違反 `/goal` 是 durable objective 不是 executable
+- ❌「每個 agent 都掛 cowork-maintainer」→ §11.0 per host 只 1 個，其他掛 `cowork-duty`
+- ❌「agent 自己 `create_goal` 沒經 owner 同意」→ 系統 prompt 禁止；走 dispatch hook
+
+### 6.7.7 驗證清單（pilot 跑之前）
+
+- [ ] dispatch 流程：session 開啟時若 agent 已裝 agent-cowork skill，自動嘗試掛 `cowork-duty` / `cowork-maintainer`
+- [ ] supervisor hook：偵測 `/new` 後若該 agent 是 cowork agent，重掛一次
+- [ ] `get_goal()` 在 `budget_limited` / `paused` 時仍可被 HEARTBEAT.md 主動讀
+- [ ] §6.6 `summary_report.py` 節流不受 `/goal` 設計影響
+- [ ] HEARTBEAT.md 從 ~200 行能壓到 ≤ 30 行（v1.8.0 目標）
+
+### 6.7.8 升級銜接（給維護者）
+
+從 v1.7.0 → v1.8.0：
+1. 改本檔 + `HEARTBEAT-snippet.md`（已 v1.8.0）
+2. 同 host 所有 agent 的 `HEARTBEAT.md` 改成「`/goal`-driven 索引式」（見 §11.4）
+3. 在每個 agent 第一次新 session / 第一次 heartbeat 自動 dispatch `cowork-duty` / `cowork-maintainer` goal
+4. 觀察 24hr：確認 §6.1/§6.2/§6.6 仍正常運作，且 §6.6 throttle 未退化
 
 ---
 

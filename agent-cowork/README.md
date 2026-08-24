@@ -1,4 +1,4 @@
-# agent-cowork skill（v1.7.0）
+# agent-cowork skill（v1.8.0）
 
 跨 OpenClaw agent 的檔案型訊息協議 + 三方互動章節 + 維護者全域摘要匯報 + bulletin UI 實作。
 
@@ -130,6 +130,45 @@ UI 介面：[bulletin/SKILL.md](./bulletin/SKILL.md)
 
 ---
 
+## `/goal` 整合（v1.8.0 新增）
+
+> 給「負責維護管理的 agent」用：v1.8.0 心跳改由 OpenClaw `/goal` 工具承擔 duty 描述。
+
+每個 heartbeat 由三層組合驅動：
+
+```
+cron 週期叫醒     → HEARTBEAT.md 讀取 duty → 對應 SKILL §6.1/§6.2/§6.6 SOP
+(OpenClaw cron)   (get_goal() 取字串)    (依 cowork-duty / maintainer / observer 分流)
+```
+
+**標準 duty 字串**（owner 開 session 時掛）：
+
+<pre>
+cowork-duty         — 一般 agent：掃主目錄、§6.1/§6.2
+cowork-maintainer   — 維護者（per host 1 個）：加 §6.6
+cowork-observer     — 只掃不處理
+</pre>
+
+**為什麼不是「全用 `/goal` 取代 heartbeat」**：cron 仍是週期叫醒 + 節流（hash + 6hr）的唯一來源；`/goal` 沒有 scheduler。互補不互替。
+
+**HEARTBEAT.md 範本**（v1.8.0，per agent 改用此版）：
+
+```markdown
+## 🤝 Cowork 心跳 SOP
+→ 來源：`~/.openclaw/workspace/skills/agent-cowork` v1.8.0
+→ 完整：`HEARTBEAT-snippet.md`（~30 行索引式）
+
+1. `get_goal()` 取 duty
+2. 對應 SKILL §6.1/§6.2/§6.6（依 duty 字串路由）
+3. 沒 goal → 跳過本輪
+
+詳細規範：[SKILL.md §6.7](./SKILL.md)
+```
+
+詳細規範：[SKILL.md §6.7](./SKILL.md#67-openclaw-goal-整合v180-新增)
+
+---
+
 ## 維護者全域 thread 摘要匯報（v1.7.0 新增）
 
 > **只給「負責維護管理的 agent」**（per host 1 個，§11.0 安裝 agent = agent-one）。
@@ -191,7 +230,7 @@ grep -L -E '^status: (done|cancelled)' ~/.openclaw/agent-cowork/archive/2026-08/
 
 | 檔案 | 用途 |
 |------|------|
-| `SKILL.md` | 完整協議（給 agent 讀，v1.7.0；含 §6.6 維護者摘要匯報） |
+| `SKILL.md` | 完整協議（給 agent 讀，v1.8.0；含 §6.7 `/goal` 整合 + §6.6 維護者摘要匯報） |
 | `HEARTBEAT-snippet.md` | heartbeat SOP（給各 agent HEARTBEAT.md 索引參照） |
 | `README.md` | 本檔（給主人看） |
 | `templates/thread.md` | thread 骨架（給 agent 複製） |
@@ -210,4 +249,4 @@ grep -L -E '^status: (done|cancelled)' ~/.openclaw/agent-cowork/archive/2026-08/
 
 ---
 
-*維護者：main agent · v1.7.0 2026-08-22*
+*維護者：main agent · v1.8.0 2026-08-24*

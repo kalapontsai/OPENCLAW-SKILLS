@@ -1,0 +1,21 @@
+# === 機敏設定（絕對不 commit）===
+config/.env
+
+# === 使用者持倉（含實際資金資料）===
+portfolio/*.json
+!portfolio/holdings.example.json
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# === 編輯器 / OS ===
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# === 大檔暫存 ===
+*.tmp
+*.swp

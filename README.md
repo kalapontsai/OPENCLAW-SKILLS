@@ -7,7 +7,7 @@
 | # | Skill | 用途 | Owner |
 |---|-------|------|-------|
 | 1 | [agent-cowork](./agent-cowork/) | 跨 agent 檔案型訊息協議（v1.3）+ 三方互動章節（flags.awaiting-decision）+ bulletin UI 實作 | agent-one (agent-one) |
-| 2 | [stock-scoring-rebalancer](./stock-scoring-rebalancer/) | 股票績效評分 + 再平衡（v1.1 from fund-plan）：phase1-6 fetch/score/backtest/rebalance + 半年 rebalance SOP | agent-one (大寶) |
+| 2 | [stock-scoring-rebalancer](./stock-scoring-rebalancer/) | ETF/股票歷史回測評分 + 半年 rebalance SOP（generic 範本） | agent-one (fund-plan) |
 
 ## 安裝
 

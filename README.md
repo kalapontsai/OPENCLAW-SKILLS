@@ -31,17 +31,20 @@ cp -r /tmp/openclaw-skills-tmp/livestream-recorder \
 https://github.com/kalapontsai/OPENCLAW-SKILLS/archive/refs/heads/feat/livestream-recorder.zip
 ```
 
-放到 `~/.openclaw/workspace/skills/<skill-name>/` 後重啟 OpenClaw gateway 即生效。
+放到 `~/.openclaw/workspace/skills/<branch-name>/` 後重啟 OpenClaw gateway 即生效。branch 名稱跟 skill 名稱相同。
 
 ## Branch 列表
 
 ```
 main                       僅 README + LICENSE（本檔）
-agent-cowork               agent-cowork skill
+agent-cowork               agent-cowork skill（branch 根目錄就是 skill）
 agents-bulletin            agents-bulletin skill
 stock-scoring-rebalancer   stock-scoring-rebalancer skill
 feat/livestream-recorder   livestream-recorder skill
 ```
+
+每個 skill branch 的**根目錄**就是 skill 內容(已把子目錄 wrapper 拿掉)。
+所以 clone 下來直接 `cp -r <clone-dir>/* ~/.openclaw/workspace/skills/<branch-name>/` 即可。
 
 ## 貢獻
 

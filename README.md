@@ -1,53 +1,78 @@
-# OPENCLAW-SKILLS
+# livestream-recorder
 
-精選的 OpenClaw skills 集合。每個一級子目錄都是一個獨立 skill，下載後放到 `~/.openclaw/workspace/skills/<name>/` 即可使用。
+Multi-hour live stream recorder with auto-retry, URL discovery, and OpenClaw cron monitoring.
 
-## Skill 索引
+## TL;DR
 
-| # | Skill | 用途 | Owner |
-|---|-------|------|-------|
-| 1 | [agent-cowork](./agent-cowork/) | 跨 agent 檔案型訊息協議（v1.3）+ 三方互動章節（flags.awaiting-decision）+ bulletin UI 實作 | agent-one (agent-one) |
-| 2 | [stock-scoring-rebalancer](./stock-scoring-rebalancer/) | ETF/股票歷史回測評分 + 半年 rebalance SOP（generic 範本） | agent-one (fund-plan) |
+Record long live streams (HLS, Periscope, YouTube Live, Luma events) to local `.ts` files using `yt-dlp + BtbN ffmpeg`. Built for unattended operation across multi-day broadcasts.
 
-## 安裝
+Tested with Grok Bot Galaxy livestream (Sept 15-17, 2026, xAI / Periscope CDN, 28h continuous across 3 days).
 
-每個 skill 是獨立目錄，整個下載 / clone 進：
+## Features
+
+- **Auto-retry on stream drop**: yt-dlp wrapper retries every 5 seconds when stream goes offline
+- **Automatic stream URL discovery**: 4-path fallback (direct → Luma join → cookies → Mux pattern)
+- **OpenClaw cron timeline**: warmup → auto-grab → start → heartbeat → stop all scheduled
+- **Cookie-aware**: handles Cloudflare-gated sources via Chrome DevTools cookie export
+- **Periscope rotation handling**: playback IDs change daily, retry loop re-extracts them automatically
+- **Heartbeat monitoring**: silent OK/WARN, alerts only on FAIL
+- **Disk management**: auto-cleans oldest segments when disk fills up
+- **Post-processing helpers**: merge segments + H.265 CRF 28 compression
+
+## Install
+
+Clone this repo into your workspace skills directory:
 
 ```
-~/.openclaw/workspace/skills/<skill-name>/
+cd ~/.openclaw/workspace/skills/
+git clone https://github.com/kalapontsai/OPENCLAW-SKILLS.git /tmp/openclaw-skills-tmp
+cp -r /tmp/openclaw-skills-tmp/livestream-recorder ./livestream-recorder
 ```
 
-重啟 OpenClaw gateway 後生效。
+Or just download the `livestream-recorder/` folder.
 
-## 結構範本（以 agent-cowork 為例）
+## What's in here
 
 ```
-agent-cowork/
-├── SKILL.md                 # 主協議（OpenClaw skill frontmatter + markdown body）
-├── HEARTBEAT-snippet.md     # heartbeat SOP 片段（貼進每個 agent 的 HEARTBEAT.md）
-├── README.md                # skill 速覽
-├── templates/
-│   └── thread.md            # thread 檔案骨架
-├── scripts/
-│   └── health-check.sh      # cowork thread 健康檢查工具
-└── bulletin/                # agents-bulletin 三方互動 UI 實作（sub-component）
-    ├── SKILL.md             # 子元件說明（depends-on agent-cowork）
-    ├── README.md
-    ├── scripts/             # 502 行 Python + 4 個 .sh
-    └── deploy/              # HTML + PHP + JS + CSS
+livestream-recorder/
+├── SKILL.md                  # Full procedure + recovery patterns + pitfalls
+└── scripts/
+    ├── record-loop.sh        # Main recording loop with auto-retry
+    ├── start.sh / stop.sh / status.sh
+    ├── auto-grab.sh          # Multi-path stream URL discovery
+    ├── heartbeat.sh          # Health check
+    ├── smart-start.sh        # Conditional start with fallback notification
+    ├── watch-url.sh          # Polls stream.env for manual URL paste
+    ├── cron-*.sh             # OpenClaw automation wrappers
+    ├── notify-failure.sh     # Fallback alert script
+    └── disk-watch.sh         # Disk cleanup + optional rclone
 ```
 
-## 貢獻
+## Quick Start
 
-每個 skill 由各自的維護 agent 負責。修改前請先在 `agent-cowork` 開 thread 通知主維護者，或在 agent 自己的 workspace 開本地工單。
+See `SKILL.md` for the full procedure. TL;DR:
 
-## 設計原則
+```
+# 1. Install tools
+curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o ~/.local/bin/yt-dlp
+chmod +x ~/.local/bin/yt-dlp
+# (See SKILL.md for BtbN ffmpeg install — johnvansickle segfaults on HLS)
 
-- **每個 skill 自給自足**：可以單獨下載、單獨安裝
-- **depends-on 在 SKILL.md frontmatter 標明**：避免隱性耦合
-- **協議層 + 實作層 視需要分層**：agent-cowork 把 bulletin 整合進來，是因為它們**總是一起用**
-- **不互相污染**：skill 之間不互相讀寫檔案，跨 skill 協作走 `sessions_send` 或 `message` tool
+# 2. Set up directory
+mkdir -p /path/to/record-loop/{bin,run,recordings,recordings-process,logs,config}
+cp scripts/* /path/to/record-loop/bin/
+
+# 3. Configure stream URL (or leave empty for auto-discovery)
+echo 'STREAM_URL=""' > /path/to/record-loop/run/stream.env
+
+# 4. Start recording
+bash /path/to/record-loop/bin/start.sh
+```
+
+## Tested
+
+- **Grok Bot Galaxy Livestream** (Sept 15-17, 2026): 28h continuous across 3 days, xAI / Periscope CDN, Cloudflare-gated Luma registration, automatic Periscope playback ID rotation handled by retry loop. Captured Day 1 (4.5 GB) and Day 2 (3.8 GB) successfully with no manual intervention.
 
 ## License
 
-MIT
+MIT (same as parent repo)

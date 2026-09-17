@@ -1,52 +1,53 @@
 # OPENCLAW-SKILLS
 
-精選的 OpenClaw skills 集合。每個一級子目錄都是一個獨立 skill，下載後放到 `~/.openclaw/workspace/skills/<name>/` 即可使用。
+精選的 OpenClaw skills 集合。每個 skill 是**獨立分支**(branch),用 `git clone -b <branch>` 抓單一 skill 即可。
 
 ## Skill 索引
 
-| # | Skill | 用途 | Owner |
+| # | Skill (branch) | 用途 | Owner |
 |---|-------|------|-------|
-| 1 | [agent-cowork](./agent-cowork/) | 跨 agent 檔案型訊息協議（v1.3）+ 三方互動章節（flags.awaiting-decision）+ bulletin UI 實作 | agent-one (agent-one) |
-| 2 | [stock-scoring-rebalancer](./stock-scoring-rebalancer/) | ETF/股票歷史回測評分 + 半年 rebalance SOP（generic 範本） | agent-one (fund-plan) |
+| 1 | [agent-cowork](https://github.com/kalapontsai/OPENCLAW-SKILLS/tree/agent-cowork/agent-cowork) | 跨 agent 檔案型訊息協議（v1.3）+ 三方互動章節（flags.awaiting-decision）+ bulletin UI 實作 | agent-one (agent-one) |
+| 2 | [agents-bulletin](https://github.com/kalapontsai/OPENCLAW-SKILLS/tree/agents-bulletin/agents-bulletin) | agents-bulletin 三方互動 UI 實作（depends-on agent-cowork） | agent-one (agent-one) |
+| 3 | [stock-scoring-rebalancer](https://github.com/kalapontsai/OPENCLAW-SKILLS/tree/stock-scoring-rebalancer/stock-scoring-rebalancer) | ETF/股票歷史回測評分 + 半年 rebalance SOP（generic 範本） | agent-one (fund-plan) |
+| 4 | [livestream-recorder](https://github.com/kalapontsai/OPENCLAW-SKILLS/tree/feat/livestream-recorder/livestream-recorder) | 多小時直播錄製（yt-dlp + ffmpeg + OpenClaw cron 心跳監控） | 大寶 |
 
-## 安裝
+## 安裝（單一 skill）
 
-每個 skill 是獨立目錄，整個下載 / clone 進：
-
-```
-~/.openclaw/workspace/skills/<skill-name>/
-```
-
-重啟 OpenClaw gateway 後生效。
-
-## 結構範本（以 agent-cowork 為例）
+每個 skill 是獨立分支,只 clone 一個 branch:
 
 ```
-agent-cowork/
-├── SKILL.md                 # 主協議（OpenClaw skill frontmatter + markdown body）
-├── HEARTBEAT-snippet.md     # heartbeat SOP 片段（貼進每個 agent 的 HEARTBEAT.md）
-├── README.md                # skill 速覽
-├── templates/
-│   └── thread.md            # thread 檔案骨架
-├── scripts/
-│   └── health-check.sh      # cowork thread 健康檢查工具
-└── bulletin/                # agents-bulletin 三方互動 UI 實作（sub-component）
-    ├── SKILL.md             # 子元件說明（depends-on agent-cowork）
-    ├── README.md
-    ├── scripts/             # 502 行 Python + 4 個 .sh
-    └── deploy/              # HTML + PHP + JS + CSS
+# 範例：抓 livestream-recorder
+git clone -b feat/livestream-recorder --single-branch \
+  https://github.com/kalapontsai/OPENCLAW-SKILLS.git \
+  /tmp/openclaw-skills-tmp
+
+cp -r /tmp/openclaw-skills-tmp/livestream-recorder \
+  ~/.openclaw/workspace/skills/livestream-recorder
+```
+
+或直接從 branch 下載 zip:
+
+```
+https://github.com/kalapontsai/OPENCLAW-SKILLS/archive/refs/heads/feat/livestream-recorder.zip
+```
+
+放到 `~/.openclaw/workspace/skills/<skill-name>/` 後重啟 OpenClaw gateway 即生效。
+
+## Branch 列表
+
+```
+main                       僅 README + LICENSE（本檔）
+agent-cowork               agent-cowork skill
+agents-bulletin            agents-bulletin skill
+stock-scoring-rebalancer   stock-scoring-rebalancer skill
+feat/livestream-recorder   livestream-recorder skill
 ```
 
 ## 貢獻
 
 每個 skill 由各自的維護 agent 負責。修改前請先在 `agent-cowork` 開 thread 通知主維護者，或在 agent 自己的 workspace 開本地工單。
 
-## 設計原則
-
-- **每個 skill 自給自足**：可以單獨下載、單獨安裝
-- **depends-on 在 SKILL.md frontmatter 標明**：避免隱性耦合
-- **協議層 + 實作層 視需要分層**：agent-cowork 把 bulletin 整合進來，是因為它們**總是一起用**
-- **不互相污染**：skill 之間不互相讀寫檔案，跨 skill 協作走 `sessions_send` 或 `message` tool
+每個 skill 一個 branch 讓安裝、版本控管、回滾都更單純。
 
 ## License
 

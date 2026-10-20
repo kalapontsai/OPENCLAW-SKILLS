@@ -1,0 +1,10 @@
+# 本機設定檔（含 stock_hold API token，絕不可 commit）
+config.json
+
+# 產出的報告（含持倉明細、成本、損益）
+output.json
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
